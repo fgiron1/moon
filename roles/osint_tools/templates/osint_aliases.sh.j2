@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# OSINT Tools
+alias osint='{{ osint_base_dir }}/osint_control.sh'
+alias sherlock='cd {{ osint_tools_dir }}/sherlock && python3 sherlock.py'
+alias spiderfoot='cd {{ osint_tools_dir }}/spiderfoot && python3 sf.py -l 0.0.0.0:8080'
+alias phoneinfo='cd {{ osint_tools_dir }}/phoneinfoga && python3 phoneinfoga.py'
+alias recon='cd {{ osint_tools_dir }}/recon-ng && ./recon-ng'
+alias harvester='cd {{ osint_tools_dir }}/theHarvester && python3 theHarvester.py'
+
+# VPN controls
+alias vpn-on='vpn on'
+alias vpn-off='vpn off'
+alias vpn-status='vpn status'
+
+# Quick shortcuts
+alias update-tools='cd {{ osint_base_dir }} && ./update-tools.sh'

@@ -1,0 +1,30 @@
+---
+- name: Install Python OSINT packages
+  pip:
+    name: "{{ osint_python_packages }}"
+    state: present
+
+- name: Clone OSINT tool repositories
+  git:
+    repo: "{{ item.repo }}"
+    dest: "{{ item.dest }}"
+    update: yes
+  loop: "{{ osint_tools }}"
+
+- name: Install OSINT tool requirements
+  pip:
+    requirements: "{{ item.dest }}/{{ item.pip_requirements_file | default('requirements.txt') }}"
+  loop: "{{ osint_tools }}"
+  when: item.pip_requirements | default(false) | bool
+
+- name: Create OSINT control script
+  template:
+    src: osint_control.sh.j2
+    dest: "{{ osint_base_dir }}/osint_control.sh"
+    mode: 0755
+
+- name: Create aliases for OSINT tools
+  template:
+    src: osint-aliases.sh.j2
+    dest: /etc/profile.d/osint-aliases.sh
+    mode: 0644

@@ -1,0 +1,6 @@
+---
+- name: Security hardening
+  hosts: osint_servers
+  become: yes
+  roles:
+    - security

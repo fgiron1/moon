@@ -1,0 +1,24 @@
+---
+# Variables specific to the individual OSINT server
+
+# Firewall settings
+ufw_rules:
+  - rule: allow
+    port: "{{ ssh_port }}"
+    proto: tcp
+  - rule: allow
+    port: 51820
+    proto: udp
+  - rule: allow
+    port: 8080
+    proto: tcp
+  - rule: allow
+    port: 8443
+    proto: tcp
+
+# VPN configuration (Mullvad)
+vpn_enabled: true
+vpn_provider: "mullvad"
+vpn_protocol: "wireguard"
+vpn_port: 51820
+vpn_dns: "10.64.0.1"

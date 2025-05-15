@@ -1,0 +1,7 @@
+---
+- name: Install OSINT tools
+  hosts: osint_servers
+  become: yes
+  roles:
+    - osint_tools
+    - data_analysis

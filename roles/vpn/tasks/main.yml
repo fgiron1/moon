@@ -1,0 +1,39 @@
+---
+- name: Install WireGuard
+  apt:
+    name:
+      - wireguard-tools
+      - openresolv
+    state: present
+
+- name: Create WireGuard config directory
+  file:
+    path: /etc/wireguard
+    state: directory
+    mode: 0700
+
+- name: Generate WireGuard private key
+  shell: |
+    wg genkey | tee /etc/wireguard/privatekey | wg pubkey > /etc/wireguard/publickey
+    chmod 600 /etc/wireguard/privatekey
+  args:
+    creates: /etc/wireguard/privatekey
+
+- name: Create WireGuard Mullvad config
+  template:
+    src: mullvad.conf.j2
+    dest: /etc/wireguard/mullvad.conf
+    mode: 0600
+
+- name: Create VPN control script
+  template:
+    src: vpn-control.sh.j2
+    dest: /usr/local/bin/vpn
+    mode: 0755
+
+- name: Enable IP forwarding
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: "1"
+    state: present
+    reload: yes

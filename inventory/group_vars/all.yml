@@ -1,0 +1,30 @@
+---
+# Common variables for all hosts
+timezone: UTC
+system_packages:
+  - ufw
+  - fail2ban
+  - unattended-upgrades
+  - iptables-persistent
+  - git
+  - curl
+  - wget
+  - jq
+  - nmap
+  - dnsutils
+  - whois
+  - python3-pip
+  - python3-venv
+  - build-essential
+  - libssl-dev
+  - libffi-dev
+  - python3-dev
+  - tor
+  - proxychains4
+  - net-tools
+
+# SSH configuration
+ssh_port: 22
+ssh_permit_root_login: "prohibit-password"
+ssh_password_authentication: "no"
+ssh_pubkey_authentication: "yes"

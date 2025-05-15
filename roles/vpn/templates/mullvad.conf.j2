@@ -1,0 +1,13 @@
+[Interface]
+PrivateKey = {{ lookup('file', '/etc/wireguard/privatekey') }}
+Address = 10.64.x.x/32  # Will need to be updated with actual Mullvad-assigned IP
+DNS = {{ vpn_dns }}
+
+[Peer]
+PublicKey = MULLVAD_SERVER_PUBLIC_KEY  # Replace with actual Mullvad server key
+Endpoint = MULLVAD_SERVER_IP:{{ vpn_port }}  # Replace with actual Mullvad server
+AllowedIPs = 0.0.0.0/0, ::/0
+
+# Ensure SSH access remains available
+PostUp = ip rule add from all sport {{ ssh_port }} lookup main priority 1
+PostDown = ip rule delete from all sport {{ ssh_port }} lookup main priority 1

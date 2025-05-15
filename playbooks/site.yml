@@ -1,0 +1,12 @@
+---
+- name: Include server setup playbook
+  import_playbook: server_setup.yml
+
+- name: Include security setup playbook
+  import_playbook: security.yml
+
+- name: Include VPN setup playbook
+  import_playbook: vpn_setup.yml
+
+- name: Include OSINT tools playbook
+  import_playbook: osint_tools.yml

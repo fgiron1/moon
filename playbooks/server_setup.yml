@@ -1,0 +1,7 @@
+---
+- name: Basic server setup
+  hosts: osint_servers
+  become: yes
+  roles:
+    - common
+    - networking

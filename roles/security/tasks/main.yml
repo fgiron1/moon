@@ -1,0 +1,57 @@
+---
+- name: Configure SSH
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin {{ ssh_permit_root_login }}' }
+    - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication {{ ssh_password_authentication }}' }
+    - { regexp: '^#?PubkeyAuthentication', line: 'PubkeyAuthentication {{ ssh_pubkey_authentication }}' }
+    - { regexp: '^#?Port', line: 'Port {{ ssh_port }}' }
+  notify: Restart SSH
+
+- name: Configure UFW default policies
+  ufw:
+    state: enabled
+    policy: deny
+    direction: "{{ item }}"
+  loop:
+    - incoming
+    - outgoing
+
+- name: Configure UFW rules
+  ufw:
+    rule: "{{ item.rule }}"
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+  loop: "{{ ufw_rules }}"
+
+- name: Configure fail2ban
+  copy:
+    src: fail2ban.local
+    dest: /etc/fail2ban/jail.local
+  notify: Restart fail2ban
+
+- name: Set up unattended upgrades
+  lineinfile:
+    path: /etc/apt/apt.conf.d/50unattended-upgrades
+    regexp: '^//\s*"${distro_id}:${distro_codename}-updates";'
+    line: '"${distro_id}:${distro_codename}-updates";'
+  notify: Restart unattended-upgrades
+
+handlers:
+  - name: Restart SSH
+    service:
+      name: ssh
+      state: restarted
+
+  - name: Restart fail2ban
+    service:
+      name: fail2ban
+      state: restarted
+
+  - name: Restart unattended-upgrades
+    service:
+      name: unattended-upgrades
+      state: restarted
