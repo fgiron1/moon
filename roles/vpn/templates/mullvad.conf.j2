@@ -1,11 +1,11 @@
 [Interface]
 PrivateKey = {{ lookup('file', '/etc/wireguard/privatekey') }}
-Address = 10.64.x.x/32  # Will need to be updated with actual Mullvad-assigned IP
+Address = 10.64.0.2/32
 DNS = {{ vpn_dns }}
 
 [Peer]
-PublicKey = MULLVAD_SERVER_PUBLIC_KEY  # Replace with actual Mullvad server key
-Endpoint = MULLVAD_SERVER_IP:{{ vpn_port }}  # Replace with actual Mullvad server
+PublicKey = {{ mullvad_server_pubkey }}
+Endpoint = {{ mullvad_server_endpoint }}
 AllowedIPs = 0.0.0.0/0, ::/0
 
 # Ensure SSH access remains available

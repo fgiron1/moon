@@ -4,6 +4,7 @@
     name:
       - wireguard-tools
       - openresolv
+      - jq
     state: present
 
 - name: Create WireGuard config directory
@@ -19,17 +20,8 @@
   args:
     creates: /etc/wireguard/privatekey
 
-- name: Create WireGuard Mullvad config
-  template:
-    src: mullvad.conf.j2
-    dest: /etc/wireguard/mullvad.conf
-    mode: 0600
-
-- name: Create VPN control script
-  template:
-    src: vpn-control.sh.j2
-    dest: /usr/local/bin/vpn
-    mode: 0755
+- name: Setup Mullvad configuration
+  import_tasks: mullvad.yml
 
 - name: Enable IP forwarding
   sysctl:

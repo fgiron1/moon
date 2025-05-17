@@ -1,0 +1,44 @@
+---
+- name: Set default Mullvad variables
+  set_fact:
+    mullvad_account: "{{ mullvad_account | default('') }}"
+    mullvad_server_region: "{{ mullvad_server_region | default('se') }}"  # Default to Sweden
+    mullvad_server_pubkey: "{{ mullvad_server_pubkey | default('lClEwn66X9APJ42HakhmDpTMWWEbwMRLg5Ayd92FqSI=') }}"  # Stockholm server
+    mullvad_server_endpoint: "{{ mullvad_server_endpoint | default('185.65.134.128:51820') }}"  # Stockholm:WireGuard
+
+- name: Check if Mullvad account is provided
+  debug:
+    msg: "Warning: No Mullvad account number provided. Using default public relay server."
+  when: mullvad_account == ''
+
+- name: Fetch Mullvad WireGuard configuration if account is provided
+  block:
+    - name: Download WireGuard configuration from Mullvad API
+      uri:
+        url: "https://api.mullvad.net/wg/{{ mullvad_account }}/{{ mullvad_server_region }}/wireguard/"
+        method: GET
+        return_content: yes
+      register: mullvad_config
+      when: mullvad_account != ''
+      ignore_errors: yes
+
+    - name: Extract server public key and endpoint from Mullvad response
+      set_fact:
+        mullvad_server_pubkey: "{{ mullvad_config.json.server_public_key }}"
+        mullvad_server_endpoint: "{{ mullvad_config.json.server_ip }}:{{ mullvad_config.json.server_port }}"
+        mullvad_client_ip: "{{ mullvad_config.json.client_ip }}"
+      when: mullvad_account != '' and mullvad_config.status == 200
+      ignore_errors: yes
+  when: mullvad_account != ''
+
+- name: Create WireGuard Mullvad config
+  template:
+    src: mullvad.conf.j2
+    dest: /etc/wireguard/mullvad.conf
+    mode: 0600
+
+- name: Create VPN control script
+  template:
+    src: vpn-control.sh.j2
+    dest: /usr/local/bin/vpn
+    mode: 0755

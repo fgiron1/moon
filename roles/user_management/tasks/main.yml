@@ -93,7 +93,13 @@
       User: campo
       Password: {{ campo_password }}
       =====================================
-      IMPORTANT: Save this information securely and delete this file afterward.
+      IMPORTANT SECURITY NOTICE:
+      1. Save these credentials securely (e.g., password manager)
+      2. Delete this file after saving using:
+         $ shred -u campo_credentials.txt    # Linux/macOS with shred
+         $ srm campo_credentials.txt         # macOS with srm
+         For Windows, use BleachBit or Eraser
+      =====================================
     dest: ./campo_credentials.txt
     mode: 0600
   run_once: true
