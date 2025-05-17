@@ -1,5 +1,5 @@
 ---
-# Common variables for all hosts
+# inventory/group_vars/all.yml
 timezone: UTC
 system_packages:
   - ufw
@@ -26,5 +26,5 @@ system_packages:
 # SSH configuration
 ssh_port: 22
 ssh_permit_root_login: "prohibit-password"
-ssh_password_authentication: "no"
+ssh_password_authentication: "yes"  # Enable password auth alongside keys
 ssh_pubkey_authentication: "yes"

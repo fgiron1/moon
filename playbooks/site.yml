@@ -5,6 +5,9 @@
 - name: Include security setup playbook
   import_playbook: security.yml
 
+- name: Include user management playbook
+  import_playbook: user_management.yml
+
 - name: Include VPN setup playbook
   import_playbook: vpn_setup.yml
 

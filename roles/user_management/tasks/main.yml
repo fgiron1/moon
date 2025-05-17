@@ -1,0 +1,100 @@
+---
+# User management tasks for secure user creation
+- name: Generate a secure password for campo user
+  set_fact:
+    campo_password: "{{ lookup('password', '/dev/null chars=ascii_letters,digits,punctuation length=20') }}"
+  run_once: true
+  delegate_to: localhost
+  no_log: true
+
+- name: Hash the password using Ansible's built-in filter
+  set_fact:
+    campo_password_hash: "{{ campo_password | password_hash('sha512') }}"
+  no_log: true
+
+- name: Create mobile user
+  user:
+    name: campo
+    shell: /usr/local/bin/campo
+    create_home: yes
+    home: /home/campo
+    groups: sudo
+    password: "{{ campo_password_hash }}"
+
+- name: Set up bash profile for campo user
+  copy:
+    dest: /home/campo/.bash_profile
+    content: |
+      #!/bin/bash
+      exec /usr/local/bin/campo
+    mode: 0644
+    owner: campo
+    group: campo
+    
+- name: Create data directories for campo user
+  file:
+    path: "/home/campo/{{ item }}"
+    state: directory
+    mode: 0755
+    owner: campo
+    group: campo
+  loop:
+    - "data"
+    - "reports"
+    - "downloads"
+    - ".ssh"
+    
+- name: Create symbolic links to OSINT tools
+  file:
+    src: "{{ osint_tools_dir }}"
+    dest: "/home/campo/tools"
+    state: link
+    owner: campo
+    group: campo
+    
+- name: Ensure authorized_keys file exists
+  file:
+    path: "/home/campo/.ssh/authorized_keys"
+    state: touch
+    mode: 0600
+    owner: campo
+    group: campo
+
+- name: Copy authorized_keys from root user
+  shell: "cat /root/.ssh/authorized_keys >> /home/campo/.ssh/authorized_keys"
+  args:
+    creates: "/home/campo/.ssh/.keys_copied"
+  register: keys_copied
+
+- name: Create flag to avoid duplicate keys
+  file:
+    path: "/home/campo/.ssh/.keys_copied"
+    state: touch
+    mode: 0600
+    owner: campo
+    group: campo
+  when: keys_copied.changed
+    
+- name: Set user campo to run specific commands without password
+  lineinfile:
+    path: /etc/sudoers.d/campo
+    line: "campo ALL=(ALL) NOPASSWD: /usr/bin/nmap, /usr/sbin/hcitool, /usr/bin/iwlist, /sbin/ip, /usr/sbin/vpn, /usr/local/bin/tor-control, /usr/local/bin/osint-network"
+    create: yes
+    mode: 0440
+
+- name: Save campo credentials to a secure file on the control node
+  delegate_to: localhost
+  copy:
+    content: |
+      =====================================
+      OSINT COMMAND CENTER CREDENTIALS
+      =====================================
+      Server: {{ ansible_host }}
+      User: campo
+      Password: {{ campo_password }}
+      =====================================
+      IMPORTANT: Save this information securely and delete this file afterward.
+    dest: ./campo_credentials.txt
+    mode: 0600
+  run_once: true
+  no_log: true

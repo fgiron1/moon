@@ -12,6 +12,13 @@ if [ -z "$CONTABO_CLIENT_ID" ] || [ -z "$CONTABO_CLIENT_SECRET" ] || [ -z "$CONT
   exit 1
 fi
 
+# Generate SSH key if it doesn't exist
+SSH_KEY_PATH="$HOME/.ssh/id_ed25519"
+if [ ! -f "$SSH_KEY_PATH" ]; then
+  echo "Generating SSH key at $SSH_KEY_PATH..."
+  ssh-keygen -t ed25519 -f "$SSH_KEY_PATH" -N ""
+fi
+
 # Initialize and apply Terraform configuration
 echo "Initializing Terraform..."
 terraform init
@@ -28,7 +35,7 @@ sed "s/{{ server_ip }}/$SERVER_IP/g" inventory/hosts.yml.template > inventory/ho
 
 # Wait for SSH to become available
 echo "Waiting for server to be ready..."
-until ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 -o ConnectTimeout=5 root@${SERVER_IP} 'exit'; do
+until ssh -o StrictHostKeyChecking=no -i $SSH_KEY_PATH -o ConnectTimeout=5 root@${SERVER_IP} 'exit'; do
   echo "Retrying connection in 5 seconds..."
   sleep 5
 done
@@ -39,6 +46,7 @@ ansible-playbook playbooks/site.yml
 
 echo "====================================="
 echo "OSINT Server deployed at ${SERVER_IP}"
-echo "Connect with: ssh -i ~/.ssh/id_ed25519 root@${SERVER_IP}"
-echo "Or through the mobile interface: ssh -i ~/.ssh/id_ed25519 campo@${SERVER_IP}"
+echo "Connect with: ssh -i $SSH_KEY_PATH root@${SERVER_IP}"
+echo "Or through the mobile interface: ssh -i $SSH_KEY_PATH campo@${SERVER_IP}"
+echo "Check campo_credentials.txt for the campo user password"
 echo "====================================="
