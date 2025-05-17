@@ -1,0 +1,37 @@
+FROM ubuntu:22.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+
+# Install basic packages
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    python3 \
+    python3-pip \
+    python3-venv \
+    jq \
+    dnsutils \
+    net-tools \
+    iputils-ping \
+    nmap \
+    whois \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create OSINT directory structure
+RUN mkdir -p /opt/osint/data /opt/osint/tools /opt/osint/scripts /opt/osint/logs
+
+# Set timezone
+RUN ln -fs /usr/share/zoneinfo/UTC /etc/localtime
+
+# Create non-root user for running applications
+RUN useradd -m -s /bin/bash osint
+
+# Set working directory
+WORKDIR /opt/osint
+
+# Set the entrypoint
+ENTRYPOINT ["/bin/bash"]

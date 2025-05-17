@@ -1,0 +1,59 @@
+---
+- name: Base server setup
+  hosts: osint_servers
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 86400  # 24 hours
+
+    - name: Install base dependencies
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - git
+          - python3
+          - python3-pip
+          - python3-venv
+          - jq
+          - dnsutils
+          - whois
+          - net-tools
+          - iptables-persistent
+          - fail2ban
+          - unattended-upgrades
+          - netfilter-persistent
+        state: present
+
+    - name: Configure timezone
+      timezone:
+        name: "{{ timezone | default('UTC') }}"
+
+    - name: Create OSINT directory structure
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: 0755
+      loop:
+        - /opt/osint
+        - /opt/osint/tools
+        - /opt/osint/data
+        - /opt/osint/scripts
+        - /opt/osint/logs
+        - /opt/osint/containers
+        - /opt/osint/secure_creds
+
+    - name: Generate a random key for credential encryption
+      shell: openssl rand -base64 32 > /root/.cred_key
+      args:
+        creates: /root/.cred_key
+
+    - name: Set secure permissions on credential key
+      file:
+        path: /root/.cred_key
+        mode: 0600

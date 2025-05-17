@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Neo4j startup script
+# Sets up Neo4j with initial constraints and default user
+
+# Set initial password
+if [ ! -f "/data/.password_set" ]; then
+    neo4j-admin set-initial-password osint_password
+    touch "/data/.password_set"
+    echo "Initial password set to 'osint_password'"
+    echo "Please change this password after first login"
+fi
+
+# Start Neo4j
+/docker-entrypoint.sh neo4j

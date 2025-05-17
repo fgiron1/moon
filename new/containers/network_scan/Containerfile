@@ -1,0 +1,37 @@
+FROM osint-base:latest
+
+# Install network scanning tools
+RUN apt-get update && apt-get install -y \
+    nmap \
+    masscan \
+    tcpdump \
+    netcat \
+    netcat-openbsd \
+    traceroute \
+    iputils-ping \
+    iputils-tracepath \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install RustScan
+RUN wget https://github.com/RustScan/RustScan/releases/download/2.0.1/rustscan_2.0.1_amd64.deb && \
+    dpkg -i rustscan_2.0.1_amd64.deb && \
+    rm rustscan_2.0.1_amd64.deb
+
+# Create configuration directory for scan profiles
+RUN mkdir -p /opt/osint/tools/network_scan/profiles
+
+# Copy scan profiles
+COPY profiles/* /opt/osint/tools/network_scan/profiles/
+
+# Switch to non-root user for most operations
+USER osint
+
+# Set working directory
+WORKDIR /opt/osint/tools/network_scan
+
+# Volume for data persistence
+VOLUME ["/opt/osint/data"]
+
+# Set entry command for interactive mode
+CMD ["/bin/bash"]

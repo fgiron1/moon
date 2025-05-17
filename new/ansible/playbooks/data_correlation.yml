@@ -1,0 +1,91 @@
+---
+- name: Configure data correlation components
+  hosts: osint_servers
+  become: yes
+  
+  tasks:
+    - name: Include data structure role
+      include_role:
+        name: data_structure
+    
+    - name: Include Neo4j role
+      include_role:
+        name: neo4j
+        
+    - name: Include container integration role
+      include_role:
+        name: container_integration
+        
+    - name: Create tools/data_correlation directory
+      file:
+        path: /opt/osint/tools/data_correlation
+        state: directory
+        mode: 0755
+    
+    - name: Create python directory
+      file:
+        path: /opt/osint/tools/data_correlation/python
+        state: directory
+        mode: 0755
+    
+    - name: Copy Python correlator code
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: 0755
+      loop:
+        - { src: "../tools/data_correlation/python/correlator.py", dest: "/opt/osint/tools/data_correlation/python/correlator.py" }
+        - { src: "../tools/data_correlation/python/importer.py", dest: "/opt/osint/tools/data_correlation/python/importer.py" }
+    
+    - name: Create data_correlation README
+      copy:
+        dest: /opt/osint/tools/data_correlation/README.md
+        content: |
+          # Data Correlation Tools
+          
+          This directory contains tools for correlating and analyzing OSINT data.
+          
+          ## Components
+          
+          - **python/**: Python-based correlation engine
+          - **neo4j/**: Neo4j database integration
+          
+          ## Usage
+          
+          The correlation engine can be used to analyze data collected from various OSINT tools
+          and identify relationships between entities.
+          
+          ### Processing Data
+          
+          ```bash
+          # Process data for a target
+          /opt/osint/scripts/data_integration.sh process example.com
+          
+          # Import data into Neo4j
+          /opt/osint/scripts/data_integration.sh import example.com
+          
+          # Export data
+          /opt/osint/scripts/data_integration.sh export example.com json
+          ```
+          
+          ### Generating Visualizations and Reports
+          
+          ```bash
+          # Generate visualization
+          python3 /opt/osint/tools/data_correlation/python/correlator.py -t example.com -v
+          
+          # Generate report
+          python3 /opt/osint/tools/data_correlation/python/correlator.py -t example.com -r
+          ```
+        mode: 0644
+    
+    - name: Create shell command wrapper for correlator
+      copy:
+        dest: /usr/local/bin/osint-correlate
+        content: |
+          #!/bin/bash
+          # Wrapper for OSINT correlation tools
+          
+          # Pass all arguments to the data integration script
+          /opt/osint/scripts/data_integration.sh "$@"
+        mode: 0755

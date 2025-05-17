@@ -1,0 +1,51 @@
+---
+- name: Security hardening
+  hosts: osint_servers
+  become: yes
+  roles:
+    - security
+
+  tasks:
+    - name: Configure SSH hardening
+      include_tasks: ../roles/security/tasks/ssh_hardening.yml
+
+    - name: Configure UFW firewall
+      ufw:
+        state: enabled
+        policy: deny
+        direction: incoming
+
+    - name: Allow SSH connections
+      ufw:
+        rule: allow
+        port: "{{ ssh_port | default('22') }}"
+        proto: tcp
+
+    - name: Configure fail2ban
+      copy:
+        src: ../roles/security/files/fail2ban.local
+        dest: /etc/fail2ban/jail.local
+      notify: Restart fail2ban
+
+    - name: Set up unattended upgrades
+      lineinfile:
+        path: /etc/apt/apt.conf.d/50unattended-upgrades
+        regexp: '^//\s*"${distro_id}:${distro_codename}-updates";'
+        line: '"${distro_id}:${distro_codename}-updates";'
+      notify: Restart unattended-upgrades
+
+  handlers:
+    - name: Restart SSH
+      service:
+        name: ssh
+        state: restarted
+
+    - name: Restart fail2ban
+      service:
+        name: fail2ban
+        state: restarted
+
+    - name: Restart unattended-upgrades
+      service:
+        name: unattended-upgrades
+        state: restarted

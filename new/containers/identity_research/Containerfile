@@ -1,0 +1,49 @@
+FROM osint-base:latest
+
+# Install identity research tools dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3-dev \
+    libffi-dev \
+    libssl-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Directory setup
+WORKDIR /opt/osint/tools
+
+# Install PhoneInfoga
+RUN git clone https://github.com/sundowndev/phoneinfoga.git && \
+    cd phoneinfoga && \
+    pip3 install -r requirements.txt
+
+# Install Holehe
+RUN git clone https://github.com/megadose/holehe.git && \
+    cd holehe && \
+    pip3 install -r requirements.txt && \
+    pip3 install -e .
+
+# Install Maigret
+RUN git clone https://github.com/soxoj/maigret.git && \
+    cd maigret && \
+    pip3 install -r requirements.txt && \
+    pip3 install -e .
+
+# Create configuration directory
+RUN mkdir -p /opt/osint/tools/identity_research/config
+
+# Copy config files 
+COPY config/* /opt/osint/tools/identity_research/config/
+
+# Volume for data persistence
+VOLUME ["/opt/osint/data"]
+
+# Create non-privileged user
+RUN useradd -m -s /bin/bash osint_user
+USER osint_user
+
+# Set default working directory
+WORKDIR /opt/osint/tools
+
+# Set entry command
+CMD ["/bin/bash"]

@@ -1,0 +1,47 @@
+FROM osint-base:latest
+
+# Install web analysis tools dependencies
+RUN apt-get update && apt-get install -y \
+    golang \
+    build-essential \
+    ruby \
+    ruby-dev \
+    libpcap-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Go tools
+ENV GOPATH=/root/go
+ENV PATH=$PATH:/root/go/bin
+
+# Install httpx
+RUN go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest && \
+    cp ~/go/bin/httpx /usr/local/bin/
+
+# Install Nuclei
+RUN go install -v github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest && \
+    cp ~/go/bin/nuclei /usr/local/bin/
+
+# Install hakrawler
+RUN go install github.com/hakluke/hakrawler@latest && \
+    cp ~/go/bin/hakrawler /usr/local/bin/
+
+# Download Nuclei templates
+RUN nuclei -update-templates
+
+# Create configuration directories
+RUN mkdir -p /opt/osint/tools/web_analysis/config \
+    /opt/osint/tools/web_analysis/templates \
+    /opt/osint/tools/web_analysis/results
+
+# Copy custom templates
+COPY templates/* /opt/osint/tools/web_analysis/templates/
+
+# Volume for data persistence
+VOLUME ["/opt/osint/data"]
+
+# Create working directory
+WORKDIR /opt/osint/tools/web_analysis
+
+# Set entry command
+CMD ["/bin/bash"]

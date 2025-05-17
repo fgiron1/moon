@@ -1,0 +1,106 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Scan Result",
+    "description": "Standardized format for scan results from different tools",
+    "type": "object",
+    "required": ["scan_id", "target", "tool", "timestamp", "entities"],
+    "properties": {
+      "scan_id": {
+        "type": "string",
+        "description": "Unique identifier for this scan"
+      },
+      "target": {
+        "type": "string",
+        "description": "Target of the scan (domain, IP, username, etc.)"
+      },
+      "tool": {
+        "type": "string",
+        "description": "Name of the tool that performed the scan"
+      },
+      "module": {
+        "type": "string",
+        "description": "Specific module or component of the tool used"
+      },
+      "timestamp": {
+        "type": "string",
+        "format": "date-time",
+        "description": "Time when the scan was performed"
+      },
+      "duration": {
+        "type": "number",
+        "description": "Duration of the scan in seconds"
+      },
+      "entities": {
+        "type": "array",
+        "description": "Entities discovered in the scan",
+        "items": {
+          "$ref": "#/definitions/Entity"
+        }
+      },
+      "relationships": {
+        "type": "array",
+        "description": "Relationships discovered between entities",
+        "items": {
+          "$ref": "#/definitions/Relationship"
+        }
+      },
+      "summary": {
+        "type": "object",
+        "description": "Summary statistics about the scan results",
+        "properties": {
+          "entity_count": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "relationship_count": {
+            "type": "integer"
+          },
+          "confidence_avg": {
+            "type": "number"
+          }
+        }
+      },
+      "raw_data": {
+        "type": "object",
+        "description": "Raw output from the tool for reference (optional)"
+      },
+      "tags": {
+        "type": "array",
+        "description": "User-defined tags for this scan",
+        "items": {
+          "type": "string"
+        }
+      },
+      "notes": {
+        "type": "string",
+        "description": "User notes about this scan"
+      }
+    },
+    "definitions": {
+      "Entity": {
+        "type": "object",
+        "required": ["id", "type", "value"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string" },
+          "value": { "type": "string" },
+          "source": { "type": "string" },
+          "confidence": { "type": "number" },
+          "attributes": { "type": "object" }
+        }
+      },
+      "Relationship": {
+        "type": "object",
+        "required": ["source_id", "target_id", "type"],
+        "properties": {
+          "source_id": { "type": "string" },
+          "target_id": { "type": "string" },
+          "type": { "type": "string" },
+          "confidence": { "type": "number" },
+          "attributes": { "type": "object" }
+        }
+      }
+    }
+  }

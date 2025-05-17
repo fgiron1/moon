@@ -1,0 +1,32 @@
+FROM neo4j:4.4
+
+# Environment variables to configure Neo4j
+ENV NEO4J_AUTH=neo4j/osintpassword
+ENV NEO4J_dbms_memory_heap_initial__size=512m
+ENV NEO4J_dbms_memory_heap_max__size=1G
+ENV NEO4J_dbms_memory_pagecache_size=512m
+ENV NEO4J_dbms_security_procedures_unrestricted=apoc.*
+ENV NEO4J_apoc_export_file_enabled=true
+ENV NEO4J_apoc_import_file_enabled=true
+ENV NEO4J_apoc_import_file_use__neo4j__config=true
+ENV NEO4J_dbms_security_procedures_whitelist=apoc.*
+
+# Install APOC plugin
+RUN apt-get update && apt-get install -y wget && \
+    wget -P /var/lib/neo4j/plugins \
+    https://github.com/neo4j-contrib/neo4j-apoc-procedures/releases/download/4.4.0.6/apoc-4.4.0.6-all.jar && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Expose Neo4j ports
+EXPOSE 7474 7687
+
+# Volume for Neo4j data
+VOLUME ["/data", "/logs", "/import"]
+
+# Set working directory
+WORKDIR /var/lib/neo4j
+
+# Copy initialization scripts
+COPY init.sh /docker-entrypoint.sh.d/
+RUN chmod +x /docker-entrypoint.sh.d/init.sh

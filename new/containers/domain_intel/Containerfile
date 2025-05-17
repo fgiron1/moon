@@ -1,0 +1,40 @@
+FROM osint-base:latest
+
+# Install domain intelligence specific tools
+RUN apt-get update && apt-get install -y \
+    golang \
+    build-essential \
+    unzip \
+    libpcap-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Amass
+RUN go install -v github.com/owasp-amass/amass/v4/...@master && \
+    cp ~/go/bin/amass* /usr/local/bin/
+
+# Install subfinder
+RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && \
+    cp ~/go/bin/subfinder /usr/local/bin/
+
+# Install dnsx
+RUN go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@latest && \
+    cp ~/go/bin/dnsx /usr/local/bin/
+
+# Create configuration directory
+RUN mkdir -p /opt/osint/tools/domain_intel/config
+
+# Copy configuration files
+COPY config/* /opt/osint/tools/domain_intel/config/
+
+# Switch to non-root user
+USER osint
+
+# Set working directory
+WORKDIR /opt/osint/tools/domain_intel
+
+# Volume for data persistence
+VOLUME ["/opt/osint/data"]
+
+# Set entry command for interactive mode
+CMD ["/bin/bash"]
