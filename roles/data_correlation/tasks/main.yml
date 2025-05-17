@@ -1,0 +1,67 @@
+---
+- name: Install Rust and development tools
+  apt:
+    name:
+      - rustc
+      - cargo
+      - pkg-config
+      - libssl-dev
+      - build-essential
+      - git
+    state: present
+
+- name: Create OSINT analysis directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0755
+  loop:
+    - "{{ osint_base_dir }}/analysis"
+    - "{{ osint_base_dir }}/analysis/bin"
+    - "{{ osint_base_dir }}/analysis/src"
+    - "{{ osint_base_dir }}/analysis/output"
+    - "{{ osint_base_dir }}/analysis/schemas"
+
+- name: Copy Rust project files
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: 0644
+  loop:
+    - { src: Cargo.toml.j2, dest: "{{ osint_base_dir }}/analysis/Cargo.toml" }
+    - { src: entity_types.json.j2, dest: "{{ osint_base_dir }}/analysis/schemas/entity_types.json" }
+    - { src: relationship_types.json.j2, dest: "{{ osint_base_dir }}/analysis/schemas/relationship_types.json" }
+    - { src: report_template.hbs.j2, dest: "{{ osint_base_dir }}/analysis/schemas/report_template.hbs" }
+
+- name: Copy Rust source files
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: 0644
+  loop:
+    - { src: main.rs.j2, dest: "{{ osint_base_dir }}/analysis/src/main.rs" }
+    - { src: parsers.rs.j2, dest: "{{ osint_base_dir }}/analysis/src/parsers.rs" }
+    - { src: entity.rs.j2, dest: "{{ osint_base_dir }}/analysis/src/entity.rs" }
+    - { src: relationship.rs.j2, dest: "{{ osint_base_dir }}/analysis/src/relationship.rs" }
+    - { src: correlator.rs.j2, dest: "{{ osint_base_dir }}/analysis/src/correlator.rs" }
+    - { src: visualizer.rs.j2, dest: "{{ osint_base_dir }}/analysis/src/visualizer.rs" }
+    - { src: report.rs.j2, dest: "{{ osint_base_dir }}/analysis/src/report.rs" }
+    - { src: lib.rs.j2, dest: "{{ osint_base_dir }}/analysis/src/lib.rs" }
+
+- name: Build Rust OSINT correlator
+  shell:
+    cmd: "cd {{ osint_base_dir }}/analysis && cargo build --release"
+    creates: "{{ osint_base_dir }}/analysis/target/release/osint-correlator"
+
+- name: Create symlink to compiled binary
+  file:
+    src: "{{ osint_base_dir }}/analysis/target/release/osint-correlator"
+    dest: "{{ osint_base_dir }}/analysis/bin/osint-correlator"
+    state: link
+    force: yes
+
+- name: Create wrapper script for OSINT analysis
+  template:
+    src: osint_analyze.sh.j2
+    dest: "{{ osint_base_dir }}/scripts/osint_analyze.sh"
+    mode: 0755

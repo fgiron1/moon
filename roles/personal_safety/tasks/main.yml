@@ -1,0 +1,40 @@
+---
+- name: Install personal safety tools
+  apt:
+    name:
+      - veracrypt
+      - keepassxc
+      - bleachbit
+      - mat2  # Metadata anonymization toolkit
+      - torbrowser-launcher
+    state: present
+
+- name: Create personal safety scripts directory
+  file:
+    path: "{{ osint_base_dir }}/safety"
+    state: directory
+    mode: 0755
+
+- name: Install privacy check tool
+  template:
+    src: privacy_check.sh.j2
+    dest: "{{ osint_base_dir }}/safety/privacy_check.sh"
+    mode: 0755
+
+- name: Install data wipe script
+  template:
+    src: secure_wipe.sh.j2
+    dest: "{{ osint_base_dir }}/safety/secure_wipe.sh"
+    mode: 0755
+
+- name: Install secure communication guide
+  template:
+    src: secure_comms_guide.md.j2
+    dest: "{{ osint_base_dir }}/safety/secure_comms_guide.md"
+    mode: 0644
+
+- name: Install personal security tips
+  template:
+    src: personal_security_tips.md.j2
+    dest: "{{ osint_base_dir }}/safety/personal_security_tips.md"
+    mode: 0644

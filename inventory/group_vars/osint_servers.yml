@@ -36,6 +36,16 @@ osint_tools:
     repo: "https://github.com/lockfale/osint-framework.git"
     dest: "{{ osint_tools_dir }}/osint-framework"
     pip_requirements: false
+  
+  - name: "maigret"
+    repo: "https://github.com/soxoj/maigret.git"
+    dest: "{{ osint_tools_dir }}/maigret"
+    pip_requirements: true
+    
+  - name: "holehe"
+    repo: "https://github.com/megadose/holehe.git"
+    dest: "{{ osint_tools_dir }}/holehe"
+    pip_requirements: true
 
 # Python packages for OSINT
 osint_python_packages:

@@ -1,6 +1,6 @@
 ---
-- name: Install OSINT tools
+- name: Install and configure bbot
   hosts: osint_servers
   become: yes
   roles:
-    - osint_tools
+    - bbot

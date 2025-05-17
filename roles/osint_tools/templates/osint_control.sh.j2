@@ -23,8 +23,8 @@ case $choice in
         echo "Social Media Investigation"
         echo "------------------------"
         echo "1. Sherlock - Find usernames across platforms"
-        echo "2. Twint - Twitter scraper"
-        echo "3. Instaloader - Instagram scraper"
+        echo "2. Maigret - Advanced username search"
+        echo "3. bbot social scan"
         echo "4. Back"
         read -p "Select tool: " tool
         case $tool in
@@ -33,19 +33,123 @@ case $choice in
                 cd {{ osint_tools_dir }}/sherlock && python3 sherlock.py $username
                 ;;
             2) 
-                read -p "Enter Twitter username: " username
-                twint -u $username
+                read -p "Enter username: " username
+                cd {{ osint_tools_dir }}/maigret && python3 -m maigret $username
                 ;;
             3)
-                read -p "Enter Instagram username: " username
-                instaloader profile $username
+                read -p "Enter username: " username
+                cd {{ osint_tools_dir }}/bbot && python -m bbot -t $username -m social -f terminal
                 ;;
             4) 
                 exec $0
                 ;;
         esac
         ;;
-    # More options implemented here
+    2)
+        clear
+        echo "Domain Intelligence"
+        echo "------------------"
+        echo "1. bbot domain scan"
+        echo "2. theHarvester"
+        echo "3. SpiderFoot"
+        echo "4. Back"
+        read -p "Select tool: " tool
+        case $tool in
+            1) 
+                read -p "Enter domain: " domain
+                cd {{ osint_tools_dir }}/bbot && python -m bbot -t $domain -m subdomain-enum,web-screenshot -f terminal
+                ;;
+            2) 
+                read -p "Enter domain: " domain
+                cd {{ osint_tools_dir }}/theHarvester && python3 theHarvester.py -d $domain -b all
+                ;;
+            3)
+                read -p "Enter domain: " domain
+                cd {{ osint_tools_dir }}/spiderfoot && python3 sf.py -l 0.0.0.0:8080
+                echo "SpiderFoot web interface started at http://0.0.0.0:8080"
+                echo "Please access the interface to continue your scan."
+                ;;
+            4) 
+                exec $0
+                ;;
+        esac
+        ;;
+    3)
+        clear
+        echo "Email Analysis"
+        echo "-------------"
+        echo "1. Holehe - Email account finder"
+        echo "2. theHarvester - Email harvesting"
+        echo "3. bbot - Email discovery"
+        echo "4. Back"
+        read -p "Select tool: " tool
+        case $tool in
+            1) 
+                read -p "Enter email: " email
+                cd {{ osint_tools_dir }}/holehe && python3 -m holehe $email
+                ;;
+            2) 
+                read -p "Enter domain: " domain
+                cd {{ osint_tools_dir }}/theHarvester && python3 theHarvester.py -d $domain -b all
+                ;;
+            3)
+                read -p "Enter email or domain: " target
+                cd {{ osint_tools_dir }}/bbot && python -m bbot -t $target -m email -f terminal
+                ;;
+            4) 
+                exec $0
+                ;;
+        esac
+        ;;
+    4)
+        clear
+        echo "Phone Number Intelligence"
+        echo "-----------------------"
+        echo "1. PhoneInfoga"
+        echo "2. bbot phone module"
+        echo "3. Back"
+        read -p "Select tool: " tool
+        case $tool in
+            1) 
+                read -p "Enter phone number (with country code): " phone
+                cd {{ osint_tools_dir }}/phoneinfoga && python3 phoneinfoga.py -n $phone
+                ;;
+            2)
+                read -p "Enter phone number: " phone
+                cd {{ osint_tools_dir }}/bbot && python -m bbot -t $phone -m phone -f terminal
+                ;;
+            3) 
+                exec $0
+                ;;
+        esac
+        ;;
+    5)
+        clear
+        echo "Network Tools"
+        echo "------------"
+        echo "1. nmap - Network scanning"
+        echo "2. whois lookup"
+        echo "3. DNS lookup"
+        echo "4. Back"
+        read -p "Select tool: " tool
+        case $tool in
+            1) 
+                read -p "Enter target IP/hostname: " target
+                nmap -sV $target
+                ;;
+            2) 
+                read -p "Enter domain: " domain
+                whois $domain
+                ;;
+            3)
+                read -p "Enter domain: " domain
+                dig $domain any
+                ;;
+            4) 
+                exec $0
+                ;;
+        esac
+        ;;
     6)
         clear
         echo "VPN Controls"
@@ -53,14 +157,32 @@ case $choice in
         echo "1. Enable VPN (Mullvad)"
         echo "2. Disable VPN"
         echo "3. Check VPN Status"
-        echo "4. Back"
+        echo "4. Enable Tor routing"
+        echo "5. Disable Tor routing"
+        echo "6. Back"
         read -p "Select option: " vpnoption
         case $vpnoption in
             1) vpn on ;;
             2) vpn off ;;
             3) vpn status ;;
-            4) exec $0 ;;
+            4) tor-control on ;;
+            5) tor-control off ;;
+            6) exec $0 ;;
         esac
+        ;;
+    7)
+        clear
+        echo "System Information"
+        echo "-----------------"
+        echo "Hostname: $(hostname)"
+        echo "IP Address: $(hostname -I | awk '{print $1}')"
+        echo "System: $(uname -a)"
+        echo "CPU Usage: $(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1"%"}')"
+        echo "Memory: $(free -h | grep Mem | awk '{print $3 " used of " $2}')"
+        echo "Disk: $(df -h / | grep / | awk '{print $3 " used of " $2 " (" $5 ")"}')"
+        echo ""
+        echo "Active Network Interfaces:"
+        ip -o addr show | grep -v "lo" | awk '{print $2 ": " $4}' | cut -d/ -f1
         ;;
     0)
         exit 0

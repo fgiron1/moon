@@ -8,7 +8,7 @@ provider "contabo" {
 
 resource "contabo_instance" "osint_server" {
   display_name = "osint-command-center"
-  product_id   = "V1"  # Adjust based on your chosen VPS size
+  product_id   = "V1"  # Cloud VPS 20 SSD - 6 CPU, 12GB RAM, 200GB SSD
   region       = "EU"  # Choose appropriate region
   
   image_id     = "ubuntu-22.04"
@@ -24,4 +24,29 @@ resource "contabo_ssh_key" "main_key" {
 
 output "server_ip" {
   value = contabo_instance.osint_server.ip_address
+}
+
+# Variables
+variable "contabo_client_id" {
+  description = "Contabo API Client ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "contabo_client_secret" {
+  description = "Contabo API Client Secret"
+  type        = string
+  sensitive   = true
+}
+
+variable "contabo_username" {
+  description = "Contabo API Username"
+  type        = string
+  sensitive   = true
+}
+
+variable "contabo_password" {
+  description = "Contabo API Password"
+  type        = string
+  sensitive   = true
 }

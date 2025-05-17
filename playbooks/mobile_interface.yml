@@ -1,0 +1,6 @@
+---
+- name: Install and configure mobile interface
+  hosts: osint_servers
+  become: yes
+  roles:
+    - mobile_interface

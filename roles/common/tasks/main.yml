@@ -27,3 +27,10 @@
     - "{{ osint_tools_dir }}"
     - "{{ osint_data_dir }}"
     - "{{ osint_scripts_dir }}"
+    - "{{ osint_base_dir }}/logs"
+
+- name: Create tools update script
+  template:
+    src: update-tools.sh.j2
+    dest: "{{ osint_base_dir }}/update-tools.sh"
+    mode: 0755

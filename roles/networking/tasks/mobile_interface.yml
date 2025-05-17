@@ -1,0 +1,64 @@
+---
+- name: Install network control dependencies
+  apt:
+    name:
+      - iproute2
+      - iptables
+      - usbutils
+      - dhcpcd5
+      - dhclient
+      - network-manager
+      - libimobiledevice-utils  # For iOS tethering support
+    state: present
+
+- name: Create network control script
+  template:
+    src: osint_network.sh.j2
+    dest: "/usr/local/bin/osint-network"
+    mode: 0755
+    owner: root
+    group: root
+
+- name: Create osint routing table configuration
+  template:
+    src: osint.conf.j2
+    dest: "/etc/iproute2/rt_tables.d/osint.conf"
+    mode: 0644
+    owner: root
+    group: root
+
+- name: Add network command to campo user profile
+  lineinfile:
+    dest: "/home/campo/.bashrc"
+    line: 'alias network="sudo /usr/local/bin/osint-network"'
+    state: present
+    create: yes
+
+- name: Add campo user to sudoers for network script
+  lineinfile:
+    dest: "/etc/sudoers.d/campo-network"
+    line: "campo ALL=(ALL) NOPASSWD: /usr/local/bin/osint-network"
+    state: present
+    create: yes
+    mode: 0440
+
+- name: Enable IP forwarding for routing
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- name: Create network interface detection udev rules for phones
+  template:
+    src: 99-osint-usb-tether.rules.j2
+    dest: "/etc/udev/rules.d/99-osint-usb-tether.rules"
+    mode: 0644
+    owner: root
+    group: root
+  notify: Reload udev rules
+
+handlers:
+  - name: Reload udev rules
+    command: udevadm control --reload-rules

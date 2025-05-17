@@ -10,3 +10,18 @@
 
 - name: Include OSINT tools playbook
   import_playbook: osint_tools.yml
+
+- name: Include bbot setup playbook
+  import_playbook: bbot_setup.yml
+
+- name: Include wireless tools playbook
+  import_playbook: wireless_tools.yml
+
+- name: Include privacy enhancements playbook
+  import_playbook: privacy.yml
+
+- name: Include mobile interface playbook
+  import_playbook: mobile_interface.yml
+
+- name: Include networking playbook
+  import_playbook: networking.yml

@@ -1,0 +1,502 @@
+#!/bin/bash
+
+# Define colors for better readability on mobile
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Terminal size detection for better mobile display
+COLS=$(tput cols)
+ROWS=$(tput lines)
+
+# Center text function
+center_text() {
+  text="$1"
+  padding=$(( (COLS - ${#text}) / 2 ))
+  printf "%${padding}s%s\n" "" "$text"
+}
+
+# Menu header
+display_header() {
+  clear
+  echo -e "${BLUE}"
+  center_text "╔════════════════════════════════════╗"
+  center_text "║       CAMPO MOBILE INTERFACE       ║"
+  center_text "╚════════════════════════════════════╝"
+  echo -e "${NC}"
+  
+  # VPN Status
+  vpn_status=$(vpn status | grep -o "VPN is active" || echo "VPN is inactive")
+  if [[ "$vpn_status" == "VPN is active" ]]; then
+    echo -e "${GREEN}● VPN: ACTIVE${NC}"
+  else
+    echo -e "${RED}● VPN: INACTIVE${NC}"
+  fi
+  
+  # Battery status if on mobile device (placeholder)
+  echo -e "${YELLOW}● Battery: Using SSH terminal${NC}"
+  echo ""
+}
+
+# Main menu
+main_menu() {
+  display_header
+  echo -e "1. ${BLUE}[👤]${NC} Person Investigation"
+  echo -e "2. ${BLUE}[🌐]${NC} Domain/Network Analysis"
+  echo -e "3. ${BLUE}[📱]${NC} RF/Wireless Tools"
+  echo -e "4. ${BLUE}[🔒]${NC} Security & Privacy"
+  echo -e "5. ${BLUE}[⚙️]${NC} System Controls"
+  echo -e "0. ${RED}[✖]${NC} Exit"
+  echo ""
+  read -p "Select option: " choice
+  
+  case $choice in
+    1) person_investigation_menu ;;
+    2) domain_analysis_menu ;;
+    3) rf_wireless_menu ;;
+    4) security_privacy_menu ;;
+    5) system_controls_menu ;;
+    0) clear; exit 0 ;;
+    *) main_menu ;;
+  esac
+}
+
+# Person Investigation Menu
+person_investigation_menu() {
+  display_header
+  echo -e "${BLUE}[👤] PERSON INVESTIGATION${NC}"
+  echo -e "1. Run bbot social scan"
+  echo -e "2. Username search (Sherlock)"
+  echo -e "3. Email investigation"
+  echo -e "4. Phone number analysis"
+  echo -e "5. Full OSINT scan"
+  echo -e "9. Back to main menu"
+  echo -e "0. Exit"
+  echo ""
+  read -p "Select option: " choice
+  
+  case $choice in
+    1) 
+      read -p "Enter target identifier (username/email/phone): " target
+      clear
+      echo -e "${YELLOW}Running bbot social scan on $target...${NC}"
+      cd {{ osint_tools_dir }}/bbot && python -m bbot -t $target -m social -f terminal
+      read -p "Press Enter to continue..."
+      person_investigation_menu
+      ;;
+    2)
+      read -p "Enter username to search: " username
+      clear
+      echo -e "${YELLOW}Searching for username across platforms...${NC}"
+      cd {{ osint_tools_dir }}/sherlock && python3 sherlock.py $username
+      read -p "Press Enter to continue..."
+      person_investigation_menu
+      ;;
+    3)
+      read -p "Enter email address: " email
+      clear
+      echo -e "${YELLOW}Investigating email address...${NC}"
+      cd {{ osint_tools_dir }}/holehe && python3 -m holehe $email
+      read -p "Press Enter to continue..."
+      person_investigation_menu
+      ;;
+    4)
+      read -p "Enter phone number (with country code): " phone
+      clear
+      echo -e "${YELLOW}Analyzing phone number...${NC}"
+      cd {{ osint_tools_dir }}/phoneinfoga && python3 phoneinfoga.py -n $phone
+      read -p "Press Enter to continue..."
+      person_investigation_menu
+      ;;
+    5)
+      read -p "Enter target (person/email/username/domain): " target
+      clear
+      echo -e "${YELLOW}Running comprehensive OSINT scan...${NC}"
+      cd {{ osint_tools_dir }}/bbot && python -m bbot -t $target -m aggressive -f terminal,json -o {{ osint_data_dir }}/$target/
+      read -p "Press Enter to continue..."
+      person_investigation_menu
+      ;;
+    9) main_menu ;;
+    0) clear; exit 0 ;;
+    *) person_investigation_menu ;;
+  esac
+}
+
+# Domain/Network Analysis Menu
+domain_analysis_menu() {
+  display_header
+  echo -e "${BLUE}[🌐] DOMAIN/NETWORK ANALYSIS${NC}"
+  echo -e "1. Domain reconnaissance (bbot)"
+  echo -e "2. Subdomain enumeration"
+  echo -e "3. Network scan"
+  echo -e "4. DNS analysis"
+  echo -e "5. Website security scan"
+  echo -e "9. Back to main menu"
+  echo -e "0. Exit"
+  echo ""
+  read -p "Select option: " choice
+  
+  case $choice in
+    1) 
+      read -p "Enter domain: " domain
+      clear
+      echo -e "${YELLOW}Running bbot domain recon on $domain...${NC}"
+      cd {{ osint_tools_dir }}/bbot && python -m bbot -t $domain -m subdomain-enum,web-screenshot -f terminal
+      read -p "Press Enter to continue..."
+      domain_analysis_menu
+      ;;
+    2)
+      read -p "Enter domain for subdomain enumeration: " domain
+      clear
+      echo -e "${YELLOW}Enumerating subdomains for $domain...${NC}"
+      cd {{ osint_tools_dir }}/bbot && python -m bbot -t $domain -m subdomain-enum -f terminal
+      read -p "Press Enter to continue..."
+      domain_analysis_menu
+      ;;
+    3)
+      read -p "Enter IP or network range (e.g., 192.168.1.0/24): " network
+      clear
+      echo -e "${YELLOW}Scanning network $network...${NC}"
+      sudo nmap -sV $network
+      read -p "Press Enter to continue..."
+      domain_analysis_menu
+      ;;
+    4)
+      read -p "Enter domain for DNS analysis: " domain
+      clear
+      echo -e "${YELLOW}Analyzing DNS for $domain...${NC}"
+      dig +short $domain A
+      dig +short $domain MX
+      dig +short $domain TXT
+      dig +short $domain NS
+      echo ""
+      echo -e "${YELLOW}Performing DNS enumeration...${NC}"
+      cd {{ osint_tools_dir }}/bbot && python -m bbot -t $domain -m dns-enum -f terminal
+      read -p "Press Enter to continue..."
+      domain_analysis_menu
+      ;;
+    5)
+      read -p "Enter website URL for security scan: " url
+      clear
+      echo -e "${YELLOW}Scanning website security...${NC}"
+      cd {{ osint_tools_dir }}/bbot && python -m bbot -t $url -m web-basic -f terminal
+      read -p "Press Enter to continue..."
+      domain_analysis_menu
+      ;;
+    9) main_menu ;;
+    0) clear; exit 0 ;;
+    *) domain_analysis_menu ;;
+  esac
+}
+
+# RF/Wireless Tools Menu
+rf_wireless_menu() {
+  display_header
+  echo -e "${BLUE}[📱] RF/WIRELESS TOOLS${NC}"
+  echo -e "1. Bluetooth scanner"
+  echo -e "2. WiFi networks scanner"
+  echo -e "3. RFID tools"
+  echo -e "4. Wireless device tracking"
+  echo -e "9. Back to main menu"
+  echo -e "0. Exit"
+  echo ""
+  read -p "Select option: " choice
+  
+  case $choice in
+    1) 
+      clear
+      echo -e "${YELLOW}Scanning for Bluetooth devices...${NC}"
+      sudo hcitool scan
+      read -p "Press Enter to continue..."
+      rf_wireless_menu
+      ;;
+    2)
+      clear
+      echo -e "${YELLOW}Scanning for WiFi networks...${NC}"
+      sudo iwlist wlan0 scan | grep ESSID
+      read -p "Press Enter to continue..."
+      rf_wireless_menu
+      ;;
+    3)
+      clear
+      echo -e "${YELLOW}RFID Tools${NC}"
+      echo "This feature requires additional hardware."
+      echo "Please connect your RFID reader device."
+      read -p "Press Enter to continue..."
+      rf_wireless_menu
+      ;;
+    4)
+      clear
+      echo -e "${YELLOW}Wireless Device Tracking${NC}"
+      echo "This feature is used for tracking wireless devices in proximity."
+      echo "1. Start tracking"
+      echo "2. View tracked devices"
+      echo "3. Back"
+      read -p "Select option: " track_option
+      case $track_option in
+        1)
+          echo "Starting wireless device tracking..."
+          # Implementation depends on hardware
+          ;;
+        2)
+          echo "Displaying tracked devices..."
+          # Implementation depends on hardware
+          ;;
+        3)
+          rf_wireless_menu
+          ;;
+      esac
+      read -p "Press Enter to continue..."
+      rf_wireless_menu
+      ;;
+    9) main_menu ;;
+    0) clear; exit 0 ;;
+    *) rf_wireless_menu ;;
+  esac
+}
+
+# Security & Privacy Menu
+security_privacy_menu() {
+  display_header
+  echo -e "${BLUE}[🔒] SECURITY & PRIVACY${NC}"
+  echo -e "1. VPN controls"
+  echo -e "2. Security status"
+  echo -e "3. Privacy checkup"
+  echo -e "4. Anti-tracking tools"
+  echo -e "5. Secure communication"
+  echo -e "6. Network controls"
+  echo -e "9. Back to main menu"
+  echo -e "0. Exit"
+  echo ""
+  read -p "Select option: " choice
+  
+  case $choice in
+    1) 
+      clear
+      echo -e "${YELLOW}VPN Controls${NC}"
+      echo "1. Enable VPN"
+      echo "2. Disable VPN"
+      echo "3. Check VPN status"
+      echo "4. Back"
+      read -p "Select option: " vpn_option
+      case $vpn_option in
+        1) sudo vpn on ;;
+        2) sudo vpn off ;;
+        3) sudo vpn status ;;
+        4) security_privacy_menu ;;
+      esac
+      read -p "Press Enter to continue..."
+      security_privacy_menu
+      ;;
+    2)
+      clear
+      echo -e "${YELLOW}Security Status${NC}"
+      echo "Checking firewall status..."
+      sudo ufw status
+      echo ""
+      echo "Checking fail2ban status..."
+      sudo systemctl status fail2ban | grep Active
+      echo ""
+      echo "Checking for system updates..."
+      sudo apt list --upgradable | head -10
+      read -p "Press Enter to continue..."
+      security_privacy_menu
+      ;;
+    3)
+      clear
+      echo -e "${YELLOW}Privacy Checkup${NC}"
+      echo "Running privacy check..."
+      sudo bash {{ osint_base_dir }}/safety/privacy_check.sh
+      read -p "Press Enter to continue..."
+      security_privacy_menu
+      ;;
+    4)
+      clear
+      echo -e "${YELLOW}Anti-Tracking Tools${NC}"
+      echo "1. Enable Tor routing"
+      echo "2. Disable Tor routing"
+      echo "3. Browser fingerprinting protection"
+      echo "4. Back"
+      read -p "Select option: " track_option
+      case $track_option in
+        1) sudo tor-control on ;;
+        2) sudo tor-control off ;;
+        3) echo "Browser fingerprinting protection..." ;;
+        4) security_privacy_menu ;;
+      esac
+      read -p "Press Enter to continue..."
+      security_privacy_menu
+      ;;
+    5)
+      clear
+      echo -e "${YELLOW}Secure Communication${NC}"
+      echo "1. Encrypted messaging"
+      echo "2. Secure file transfer"
+      echo "3. Back"
+      read -p "Select option: " comm_option
+      case $comm_option in
+        1) echo "Encrypted messaging..." ;;
+        2) echo "Secure file transfer..." ;;
+        3) security_privacy_menu ;;
+      esac
+      read -p "Press Enter to continue..."
+      security_privacy_menu
+      ;;
+    6)
+      clear
+      echo -e "${YELLOW}Network Interface Controls${NC}"
+      echo "1. Show available interfaces"
+      echo "2. Show current routing"
+      echo "3. Use specific interface"
+      echo "4. Set up phone tethering"
+      echo "5. Reset to default routing"
+      echo "6. Back"
+      read -p "Select option: " network_option
+      case $network_option in
+        1)
+          sudo osint-network list
+          ;;
+        2)
+          sudo osint-network status
+          ;;
+        3)
+          echo "Available interfaces:"
+          interfaces=$(ip -o link show | awk -F': ' '{print $2}' | grep -v "lo" | tr '\n' ' ')
+          echo $interfaces
+          read -p "Enter interface name: " iface
+          if [[ -z "$iface" ]]; then
+            echo "No interface specified"
+          else
+            sudo osint-network use $iface $USER
+          fi
+          ;;
+        4)
+          sudo osint-network phone
+          ;;
+        5)
+          sudo osint-network reset
+          ;;
+        6)
+          security_privacy_menu
+          return
+          ;;
+      esac
+      read -p "Press Enter to continue..."
+      security_privacy_menu
+      ;;
+    9) main_menu ;;
+    0) clear; exit 0 ;;
+    *) security_privacy_menu ;;
+  esac
+}
+
+# System Controls Menu
+system_controls_menu() {
+  display_header
+  echo -e "${BLUE}[⚙️] SYSTEM CONTROLS${NC}"
+  echo -e "1. Update OSINT tools"
+  echo -e "2. System status"
+  echo -e "3. Data management"
+  echo -e "4. Power options"
+  echo -e "9. Back to main menu"
+  echo -e "0. Exit"
+  echo ""
+  read -p "Select option: " choice
+  
+  case $choice in
+    1) 
+      clear
+      echo -e "${YELLOW}Updating OSINT tools...${NC}"
+      sudo {{ osint_base_dir }}/update-tools.sh
+      read -p "Press Enter to continue..."
+      system_controls_menu
+      ;;
+    2)
+      clear
+      echo -e "${YELLOW}System Status${NC}"
+      echo "CPU Usage:"
+      top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1"%"}'
+      echo ""
+      echo "Memory Usage:"
+      free -h
+      echo ""
+      echo "Disk Usage:"
+      df -h | grep -v tmpfs
+      read -p "Press Enter to continue..."
+      system_controls_menu
+      ;;
+    3)
+      clear
+      echo -e "${YELLOW}Data Management${NC}"
+      echo "1. List OSINT data"
+      echo "2. Export data"
+      echo "3. Clear old data"
+      echo "4. Back"
+      read -p "Select option: " data_option
+      case $data_option in
+        1) 
+          echo "OSINT Data files:"
+          ls -lh {{ osint_data_dir }} 
+          ;;
+        2) 
+          echo "Export options:"
+          # Implementation needed
+          ;;
+        3) 
+          echo "Clear data options:"
+          echo "1. Secure wipe selected data"
+          echo "2. Delete all data (dangerous)"
+          echo "3. Back"
+          read -p "Select option: " wipe_option
+          case $wipe_option in
+            1) sudo bash {{ osint_base_dir }}/safety/secure_wipe.sh ;;
+            2) 
+              read -p "This will permanently delete ALL data. Type 'YES' to confirm: " confirm
+              if [ "$confirm" = "YES" ]; then
+                echo "Deleting all data..."
+                sudo rm -rf {{ osint_data_dir }}/*
+                echo "All data deleted."
+              fi
+              ;;
+            3) ;;
+          esac
+          ;;
+        4) system_controls_menu ;;
+      esac
+      read -p "Press Enter to continue..."
+      system_controls_menu
+      ;;
+    4)
+      clear
+      echo -e "${YELLOW}Power Options${NC}"
+      echo "1. Restart server"
+      echo "2. Shutdown server"
+      echo "3. Back"
+      read -p "Select option: " power_option
+      case $power_option in
+        1) 
+          read -p "Are you sure you want to restart the server? (y/n): " confirm
+          if [ "$confirm" = "y" ]; then
+            sudo reboot
+          fi
+          ;;
+        2) 
+          read -p "Are you sure you want to shutdown the server? (y/n): " confirm
+          if [ "$confirm" = "y" ]; then
+            sudo shutdown -h now
+          fi
+          ;;
+        3) system_controls_menu ;;
+      esac
+      system_controls_menu
+      ;;
+    9) main_menu ;;
+    0) clear; exit 0 ;;
+    *) system_controls_menu ;;
+  esac
+}
+
+# Start the menu
+main_menu

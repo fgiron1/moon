@@ -1,0 +1,6 @@
+---
+- name: Configure networking and interface controls
+  hosts: osint_servers
+  become: yes
+  roles:
+    - networking
