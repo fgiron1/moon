@@ -1,59 +1,45 @@
 ---
-# Variables specific to OSINT servers
-osint_base_dir: /opt/osint
-osint_tools_dir: "{{ osint_base_dir }}/tools"
-osint_data_dir: "{{ osint_base_dir }}/data"
-osint_scripts_dir: "{{ osint_base_dir }}/scripts"
+# OSINT server-specific configuration
+osint_server_config:
+  data_directory: /opt/osint/data
+  tools_directory: /opt/osint/tools
+  log_directory: /opt/osint/logs
 
-# Tools to install
+# Specific tool configurations
 osint_tools:
-  - name: "sherlock"
-    repo: "https://github.com/sherlock-project/sherlock.git"
-    dest: "{{ osint_tools_dir }}/sherlock"
-    pip_requirements: true
-  
-  - name: "spiderfoot"
-    repo: "https://github.com/smicallef/spiderfoot.git"
-    dest: "{{ osint_tools_dir }}/spiderfoot"
-    pip_requirements: true
-  
-  - name: "phoneinfoga"
-    repo: "https://github.com/sundowndev/phoneinfoga.git"
-    dest: "{{ osint_tools_dir }}/phoneinfoga"
-    pip_requirements: true
-  
-  - name: "recon-ng"
-    repo: "https://github.com/lanmaster53/recon-ng.git"
-    dest: "{{ osint_tools_dir }}/recon-ng"
-    pip_requirements_file: "REQUIREMENTS"
-  
-  - name: "theHarvester"
-    repo: "https://github.com/laramies/theHarvester.git"
-    dest: "{{ osint_tools_dir }}/theHarvester"
-    pip_requirements: true
-    
-  - name: "osint-framework"
-    repo: "https://github.com/lockfale/osint-framework.git"
-    dest: "{{ osint_tools_dir }}/osint-framework"
-    pip_requirements: false
-  
-  - name: "maigret"
-    repo: "https://github.com/soxoj/maigret.git"
-    dest: "{{ osint_tools_dir }}/maigret"
-    pip_requirements: true
-    
-  - name: "holehe"
-    repo: "https://github.com/megadose/holehe.git"
-    dest: "{{ osint_tools_dir }}/holehe"
-    pip_requirements: true
+  domain_intel:
+    - name: amass
+      version: latest
+      config_path: /opt/osint/tools/domain_intel/configs/amass.ini
+    - name: subfinder
+      version: latest
+      config_path: /opt/osint/tools/domain_intel/configs/subfinder.yml
 
-# Python packages for OSINT
-osint_python_packages:
-  - shodan
-  - censys
-  - requests
-  - beautifulsoup4
-  - pandas
-  - matplotlib
-  - seaborn
-  - notebook
+  network_scan:
+    - name: nmap
+      version: latest
+    - name: rustscan
+      version: latest
+      max_ports: 65535
+      rate_limit: 5000
+
+# Container runtime settings
+container_runtime:
+  engine: containerd
+  network_name: osint-bridge
+  cni_version: 0.4.0
+
+# VPN configuration
+vpn:
+  provider: mullvad
+  protocol: wireguard
+  auto_connect: false
+  kill_switch: true
+  dns_servers:
+    - 10.64.0.1
+    - 1.1.1.1
+
+# Tor routing configuration
+tor:
+  transparent_routing: false
+  exit_nodes_country: null

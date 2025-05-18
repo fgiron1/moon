@@ -2,6 +2,8 @@
 - name: Basic server setup
   hosts: osint_servers
   become: yes
+  vars:
+    timezone: "{{ timezone | default('UTC') }}"
   tasks:
     - name: Update apt cache
       apt:
@@ -10,24 +12,7 @@
 
     - name: Install base dependencies
       apt:
-        name:
-          - apt-transport-https
-          - ca-certificates
-          - curl
-          - gnupg
-          - lsb-release
-          - git
-          - python3
-          - python3-pip
-          - python3-venv
-          - jq
-          - dnsutils
-          - whois
-          - net-tools
-          - iptables-persistent
-          - fail2ban
-          - unattended-upgrades
-          - netfilter-persistent
+        name: "{{ system_packages }}"
         state: present
 
     - name: Configure timezone

@@ -136,7 +136,10 @@ provision_infrastructure() {
     
     # Create dynamic Ansible inventory
     echo -e "${YELLOW}Creating Ansible inventory...${NC}"
-    sed "s/{{ server_ip }}/$SERVER_IP/g" ansible/inventory/hosts.yml.template > ansible/inventory/hosts.yml
+    sed -e "s/{{ server_ip }}/$SERVER_IP/g" \
+        -e "s/{{ server_user }}/root/g" \
+        -e "s|{{ ssh_key_path }}|$HOME/.ssh/id_ed25519|g" \
+        ansible/inventory/hosts.yml.template > ansible/inventory/hosts.yml
 }
 
 # Function to wait for SSH
