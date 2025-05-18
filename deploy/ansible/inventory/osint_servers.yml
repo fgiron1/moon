@@ -1,37 +1,44 @@
 ---
 # OSINT server-specific configuration
 osint_server_config:
-  data_directory: /opt/osint/data
-  tools_directory: /opt/osint/tools
-  log_directory: /opt/osint/logs
+  data_directory: "{{ osint_data_dir | default('/opt/osint/data') }}"
+  tools_directory: "{{ osint_tools_dir | default('/opt/osint/tools') }}"
+  log_directory: "{{ osint_log_dir | default('/opt/osint/logs') }}"
 
-# Specific tool configurations
+# Module data directories
+module_directories:
+  web: "{{ osint_web_data_dir | default(osint_server_config.data_directory + '/web') }}"
+  network: "{{ osint_network_data_dir | default(osint_server_config.data_directory + '/network') }}"
+  identity: "{{ osint_identity_data_dir | default(osint_server_config.data_directory + '/identity') }}"
+  domain: "{{ osint_domain_data_dir | default(osint_server_config.data_directory + '/domain') }}"
+
+# Tool configurations
 osint_tools:
   domain_intel:
     - name: amass
       version: latest
-      config_path: /opt/osint/tools/domain_intel/configs/amass.ini
+      config_path: "{{ osint_tools_config_dir | default(osint_server_config.tools_directory + '/domain_intel/configs/amass.ini') }}"
     - name: subfinder
       version: latest
-      config_path: /opt/osint/tools/domain_intel/configs/subfinder.yml
+      config_path: "{{ osint_tools_config_dir | default(osint_server_config.tools_directory + '/domain_intel/configs/subfinder.yml') }}"
 
   network_scan:
     - name: nmap
       version: latest
     - name: rustscan
       version: latest
-      max_ports: 65535
-      rate_limit: 5000
+      max_ports: "{{ rustscan_max_ports | default('65535') }}"
+      rate_limit: "{{ rustscan_rate_limit | default('5000') }}"
 
 # Container runtime settings
 container_runtime:
-  engine: containerd
-  network_name: osint-bridge
-  cni_version: 0.4.0
+  engine: "{{ container_engine | default('containerd') }}"
+  network_name: "{{ container_network_name | default('osint-bridge') }}"
+  cni_version: "{{ container_cni_version | default('0.4.0') }}"
 
 # VPN configuration
 vpn:
-  provider: mullvad
+  provider: "{{ vpn_provider | default('mullvad') }}"
   protocol: wireguard
   auto_connect: false
   kill_switch: true
