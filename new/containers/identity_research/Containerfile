@@ -1,49 +1,55 @@
 FROM osint-base:latest
 
-# Install identity research tools dependencies
+# Install dependencies
 RUN apt-get update && apt-get install -y \
-    build-essential \
+    python3 \
+    python3-pip \
     python3-dev \
-    libffi-dev \
+    python3-venv \
+    git \
+    wget \
+    curl \
     libssl-dev \
+    libffi-dev \
+    build-essential \
+    libxml2-dev \
+    libxslt1-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Directory setup
+# Create working directory
 WORKDIR /opt/osint/tools
 
-# Install PhoneInfoga
-RUN git clone https://github.com/sundowndev/phoneinfoga.git && \
-    cd phoneinfoga && \
-    pip3 install -r requirements.txt
+# Clone and install Sherlock
+RUN git clone https://github.com/sherlock-project/sherlock.git && \
+    cd sherlock && \
+    python3 -m pip install -r requirements.txt
 
-# Install Holehe
+# Clone and install Holehe
 RUN git clone https://github.com/megadose/holehe.git && \
     cd holehe && \
-    pip3 install -r requirements.txt && \
-    pip3 install -e .
+    python3 -m pip install -r requirements.txt && \
+    python3 -m pip install -e .
 
-# Install Maigret
+# Clone and install Maigret
 RUN git clone https://github.com/soxoj/maigret.git && \
     cd maigret && \
-    pip3 install -r requirements.txt && \
-    pip3 install -e .
+    python3 -m pip install -r requirements.txt && \
+    python3 -m pip install -e .
 
-# Create configuration directory
-RUN mkdir -p /opt/osint/tools/identity_research/config
+# Clone and install PhoneInfoga
+RUN git clone https://github.com/sundowndev/phoneinfoga.git && \
+    cd phoneinfoga && \
+    python3 -m pip install -r requirements.txt
 
-# Copy config files 
-COPY config/* /opt/osint/tools/identity_research/config/
+# Clone and install bbot
+RUN pip install bbot
 
-# Volume for data persistence
-VOLUME ["/opt/osint/data"]
-
-# Create non-privileged user
-RUN useradd -m -s /bin/bash osint_user
-USER osint_user
-
-# Set default working directory
+# Set default workdir
 WORKDIR /opt/osint/tools
 
-# Set entry command
-CMD ["/bin/bash"]
+# Create persistent data volume
+VOLUME ["/opt/osint/data"]
+
+# Set entrypoint
+ENTRYPOINT ["/bin/bash"]

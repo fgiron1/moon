@@ -1,0 +1,64 @@
+# Subfinder configuration file for OSINT Command Center
+
+# API keys for different providers
+binaryedge:
+  - API_KEY_PLACEHOLDER
+
+censys:
+  - API_KEY_PLACEHOLDER
+  - SECRET_KEY_PLACEHOLDER
+
+certspotter:
+  - API_KEY_PLACEHOLDER
+  
+dnsdumpster: []
+
+fofa:
+  - EMAIL_PLACEHOLDER
+  - API_KEY_PLACEHOLDER
+
+github:
+  - API_KEY_PLACEHOLDER
+
+passivetotal:
+  - USERNAME_PLACEHOLDER
+  - API_KEY_PLACEHOLDER
+
+securitytrails:
+  - API_KEY_PLACEHOLDER
+
+shodan:
+  - API_KEY_PLACEHOLDER
+
+urlscan:
+  - API_KEY_PLACEHOLDER
+
+virustotal:
+  - API_KEY_PLACEHOLDER
+
+zoomeye:
+  - API_KEY_PLACEHOLDER
+
+# Sources to use for enumeration
+sources:
+  - alienvault
+  - anubis
+  - bufferover
+  - certspotter
+  - censys
+  - crtsh
+  - dnsdumpster
+  - hackertarget
+  - passivetotal
+  - securitytrails
+  - shodan
+  - threatcrowd
+  - virustotal
+  - waybackarchive
+
+# Output configuration
+all-sources: true
+recursive: true
+recursion-depth: 2
+threads: 10
+timeout: 30

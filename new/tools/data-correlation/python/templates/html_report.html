@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OSINT Report: {{ target }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .header {
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .chart {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .chart img {
+            max-width: 100%;
+            height: auto;
+        }
+        .summary-box {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+            font-size: 0.8em;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>OSINT Analysis Report: {{ target }}</h1>
+            <p>Generated on {{ generated_at }}</p>
+            <p>Based on data collected at {{ timestamp }}</p>
+        </div>
+        
+        <div class="section">
+            <h2>Executive Summary</h2>
+            <div class="summary-box">
+                <p>This report contains the findings from OSINT analysis of <strong>{{ target }}</strong>.</p>
+                <p>Total entities discovered: {{ total_entities }}</p>
+                <p>Total relationships identified: {{ total_relationships }}</p>
+                <p>Tools used: {{ tools_used|join(', ') }}</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Entity Summary</h2>
+            {% if entity_type_chart %}
+            <div class="chart">
+                <img src="{{ entity_type_chart }}" alt="Entity Type Distribution">
+            </div>
+            {% endif %}
+            
+            <table>
+                <tr>
+                    <th>Entity Type</th>
+                    <th>Count</th>
+                </tr>
+                {% for entity_type, entities in entities_by_type.items() %}
+                <tr>
+                    <td>{{ entity_type }}</td>
+                    <td>{{ entities|length }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        
+        {% for entity_type, entities in entities_by_type.items() %}
+        <div class="section">
+            <h2>{{ entity_type|capitalize }} Entities</h2>
+            <table>
+                <tr>
+                    <th>Value</th>
+                    <th>Confidence</th>
+                    <th>Source</th>
+                </tr>
+                {% for entity in entities %}
+                <tr>
+                    <td>{{ entity.value }}</td>
+                    <td>{{ entity.confidence }}</td>
+                    <td>
+                        {% if entity.source %}
+                            {{ entity.source }}
+                        {% elif entity.sources %}
+                            {{ entity.sources|join(', ') }}
+                        {% else %}
+                            Unknown
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% endfor %}
+        
+        {% if relationships %}
+        <div class="section">
+            <h2>Relationship Summary</h2>
+            {% if relationship_type_chart %}
+            <div class="chart">
+                <img src="{{ relationship_type_chart }}" alt="Relationship Type Distribution">
+            </div>
+            {% endif %}
+            
+            <table>
+                <tr>
+                    <th>Relationship Type</th>
+                    <th>Count</th>
+                </tr>
+                {% for rel_type, rels in relationships_by_type.items() %}
+                <tr>
+                    <td>{{ rel_type }}</td>
+                    <td>{{ rels|length }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        
+        {% for rel_type, rels in relationships_by_type.items() %}
+        <div class="section">
+            <h2>{{ rel_type|capitalize }} Relationships</h2>
+            <table>
+                <tr>
+                    <th>Source</th>
+                    <th>Target</th>
+                    <th>Confidence</th>
+                </tr>
+                {% for rel in rels %}
+                <tr>
+                    <td>{{ rel.source_id }}</td>
+                    <td>{{ rel.target_id }}</td>
+                    <td>{{ rel.confidence }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% endfor %}
+        {% endif %}
+        
+        <div class="footer">
+            <p>OSINT Command Center - Analysis Report</p>
+            <p>Generated using standardized OSINT data</p>
+        </div>
+    </div>
+</body>
+</html>

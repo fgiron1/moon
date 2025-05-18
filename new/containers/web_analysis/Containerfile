@@ -1,47 +1,53 @@
-FROM osint-base:latest
-
-# Install web analysis tools dependencies
-RUN apt-get update && apt-get install -y \
-    golang \
-    build-essential \
-    ruby \
-    ruby-dev \
-    libpcap-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Go tools
+# Set Go environment variables
 ENV GOPATH=/root/go
 ENV PATH=$PATH:/root/go/bin
 
-# Install httpx
+# Install Go-based tools
 RUN go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest && \
-    cp ~/go/bin/httpx /usr/local/bin/
+    go install -v github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest && \
+    go install github.com/hakluke/hakrawler@latest && \
+    go install github.com/ffuf/ffuf@latest && \
+    go install github.com/tomnomnom/waybackurls@latest && \
+    go install github.com/tomnomnom/gf@latest
 
-# Install Nuclei
-RUN go install -v github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest && \
-    cp ~/go/bin/nuclei /usr/local/bin/
+# Copy Go tools to /usr/local/bin
+RUN cp /root/go/bin/* /usr/local/bin/
 
-# Install hakrawler
-RUN go install github.com/hakluke/hakrawler@latest && \
-    cp ~/go/bin/hakrawler /usr/local/bin/
+# Install WhatWeb
+RUN git clone https://github.com/urbanadventurer/WhatWeb.git /opt/osint/tools/whatweb && \
+    cd /opt/osint/tools/whatweb && \
+    gem install bundler && \
+    bundle install
 
-# Download Nuclei templates
+# Install feroxbuster
+RUN curl -sL https://github.com/epi052/feroxbuster/releases/latest/download/feroxbuster_amd64.deb.zip -o feroxbuster.zip && \
+    unzip feroxbuster.zip && \
+    dpkg -i feroxbuster_*_amd64.deb && \
+    rm feroxbuster_*_amd64.deb* && \
+    mkdir -p /root/.config/feroxbuster
+
+# Update nuclei templates
 RUN nuclei -update-templates
 
 # Create configuration directories
 RUN mkdir -p /opt/osint/tools/web_analysis/config \
     /opt/osint/tools/web_analysis/templates \
-    /opt/osint/tools/web_analysis/results
+    /opt/osint/tools/web_analysis/wordlists
 
-# Copy custom templates
-COPY templates/* /opt/osint/tools/web_analysis/templates/
+# Create common wordlist directory and download useful wordlists
+RUN mkdir -p /opt/osint/tools/web_analysis/wordlists && \
+    cd /opt/osint/tools/web_analysis/wordlists && \
+    wget -q -O common.txt https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/common.txt && \
+    wget -q -O directory-list-2.3-medium.txt https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/directory-list-2.3-medium.txt
 
-# Volume for data persistence
+# Configure WhatWeb path
+ENV PATH="/opt/osint/tools/whatweb:${PATH}"
+
+# Create data volume
 VOLUME ["/opt/osint/data"]
 
-# Create working directory
+# Set working directory
 WORKDIR /opt/osint/tools/web_analysis
 
-# Set entry command
-CMD ["/bin/bash"]
+# Default command
+ENTRYPOINT ["/bin/bash"]

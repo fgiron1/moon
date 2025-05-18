@@ -76,7 +76,7 @@ ansible-playbook playbooks/site.yml
 echo "====================================="
 echo "OSINT Server deployed at ${SERVER_IP}"
 echo "Connect with: ssh -i $SSH_KEY_PATH root@${SERVER_IP}"
-echo "Or through the mobile interface: ssh -i $SSH_KEY_PATH campo@${SERVER_IP}"
+echo "Or through the mobile interface: ssh -i $SSH_KEY_PATH user@${SERVER_IP}"
 echo "Check campo_credentials.txt for the campo user password"
 echo ""
 echo "IMPORTANT SECURITY NOTICE:"

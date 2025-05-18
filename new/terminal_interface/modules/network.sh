@@ -2,7 +2,7 @@
 
 # Network Scanning module for OSINT Command Center
 
-# Run RustScan and Nmap
+# Run network scan
 network_scan() {
     local target=""
     
@@ -109,7 +109,7 @@ network_scan() {
         fi
         
         # Convert to human-readable output
-        nerdctl exec osint-network-scan xsltproc /opt/osint/data/network/$target_safe/$scan_type.xml -o /opt/osint/data/network/$target_safe/scan_report.html
+        nerdctl exec osint-network-scan xsltproc "$scan_file" -o "$target_dir/scan_report.html"
     else
         status_message error "Scan failed or no results found"
     fi
@@ -150,7 +150,7 @@ service_detection() {
     
     # Run nmap service detection
     echo -e "${YELLOW}Running service version detection...${NC}"
-    local cmd="nerdctl exec osint-network-scan nmap $port_param -sV -sC $target -oX /opt/osint/data/network/$target_safe/service_detection.xml"
+    local cmd="nerdctl exec osint-network-scan nmap $port_param -sV -sC $target -oX $target_dir/service_detection.xml"
     $cmd &
     show_spinner $! "Detecting service versions..."
     
@@ -177,7 +177,7 @@ service_detection() {
         sort -n -k2 -t ' '
         
         # Convert to human-readable output
-        nerdctl exec osint-network-scan xsltproc /opt/osint/data/network/$target_safe/service_detection.xml -o /opt/osint/data/network/$target_safe/service_report.html
+        nerdctl exec osint-network-scan xsltproc "$target_dir/service_detection.xml" -o "$target_dir/service_report.html"
     else
         status_message error "Service detection failed or no results found"
     fi
@@ -202,7 +202,7 @@ network_recon() {
     
     # Run host discovery
     echo -e "${YELLOW}Running host discovery...${NC}"
-    local cmd="nerdctl exec osint-network-scan nmap -sn $target -oX /opt/osint/data/network/$target_safe/host_discovery.xml"
+    local cmd="nerdctl exec osint-network-scan nmap -sn $target -oX $target_dir/host_discovery.xml"
     $cmd &
     show_spinner $! "Discovering hosts on the network..."
     
@@ -246,7 +246,7 @@ network_recon() {
                 # Remove trailing comma
                 live_hosts_param=${live_hosts_param%,}
                 
-                local cmd="nerdctl exec osint-network-scan nmap -sV -sC -oX /opt/osint/data/network/$target_safe/service_scan.xml $live_hosts_param"
+                local cmd="nerdctl exec osint-network-scan nmap -sV -sC -oX $target_dir/service_scan.xml $live_hosts_param"
                 $cmd &
                 show_spinner $! "Scanning services on live hosts..."
                 
@@ -267,7 +267,7 @@ network_recon() {
                     head -20
                     
                     # Convert to human-readable output
-                    nerdctl exec osint-network-scan xsltproc /opt/osint/data/network/$target_safe/service_scan.xml -o /opt/osint/data/network/$target_safe/network_services.html
+                    nerdctl exec osint-network-scan xsltproc "$target_dir/service_scan.xml" -o "$target_dir/network_services.html"
                 else
                     status_message error "Service scan failed or no results found"
                 fi
@@ -283,38 +283,77 @@ network_recon() {
     read -p "Press Enter to continue..." dummy
 }
 
-# Network scanning menu
-network_menu() {
-    display_header
-    echo -e "${BLUE}[🔍] NETWORK SCANNING${NC}"
-    echo -e "1. Port Scan (Single Host)"
-    echo -e "2. Service Detection"
-    echo -e "3. Network Reconnaissance"
-    echo -e "4. Export Network Data"
-    echo -e "9. Back to Main Menu"
-    echo -e "0. Exit"
+# Vulnerability scanning
+vulnerability_scan() {
+    local target=""
+    
+    # Get target
+    read_input "Enter target IP or domain: " target
+    
+    # Validate target
+    if ! validate_ip "$target" 2>/dev/null && ! validate_domain "$target" 2>/dev/null; then
+        status_message error "Invalid target. Please enter a valid IP address or domain name."
+        sleep 2
+        return
+    fi
+    
+    # Create target directory
+    local target_safe=$(echo "$target" | tr '/' '_')
+    local target_dir="$DATA_DIR/network/$target_safe"
+    mkdir -p "$target_dir"
+    
+    section_header "Vulnerability Scan: $target"
+    
+    # Run nmap with vulnerability scripts
+    echo -e "${YELLOW}Running vulnerability scan...${NC}"
+    echo -e "${RED}Warning: This scan may trigger IDS/IPS alerts${NC}"
     echo
     
-    read_input "Select option: " option validate_number
+    read -p "Do you want to continue? (y/N): " confirm
+    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+        status_message warning "Scan aborted"
+        sleep 2
+        return
+    fi
     
-    case $option in
-        1) network_scan ;;
-        2) service_detection ;;
-        3) network_recon ;;
-        4) export_network_data ;;
-        9) return ;;
-        0) exit 0 ;;
-        *) network_menu ;;
-    esac
+    local cmd="nerdctl exec osint-network-scan nmap -sV --script vuln $target -oX $target_dir/vuln_scan.xml"
+    $cmd &
+    show_spinner $! "Scanning for vulnerabilities..."
     
-    # Return to network menu after function completes
-    network_menu
+    # Process results
+    if [[ -f "$target_dir/vuln_scan.xml" ]]; then
+        echo
+        status_message success "Vulnerability scan completed"
+        echo
+        
+        # Extract vulnerability information
+        echo -e "${BLUE}Potential vulnerabilities for $target:${NC}"
+        echo
+        
+        # Extract script output with vulnerabilities
+        grep -A10 "id=\"vuln" "$target_dir/vuln_scan.xml" | 
+        grep -E 'id="|output=' | 
+        tr '\n' ' ' | 
+        sed -E 's/<script |<\/script>/\n/g' | 
+        grep 'output=' | 
+        sed -E 's/.*id="([^"]+)".*output="([^"]+)".*/\1: \2/g' | 
+        sed -E 's/&lt;/</g' | sed -E 's/&gt;/>/g' | sed -E 's/&quot;/"/g' | 
+        head -20
+        
+        # Convert to human-readable output
+        nerdctl exec osint-network-scan xsltproc "$target_dir/vuln_scan.xml" -o "$target_dir/vuln_report.html"
+    else
+        status_message error "Vulnerability scan failed or no results found"
+    fi
+    
+    echo
+    read -p "Press Enter to continue..." dummy
 }
 
 # Export network data
 export_network_data() {
     # Check if any network scans have been performed
-    if [[ ! -d "$DATA_DIR/network" || -z "$(ls -A "$DATA_DIR/network")" ]]; then
+    if [[ ! -d "$DATA_DIR/network" || -z "$(ls -A "$DATA_DIR/network" 2>/dev/null)" ]]; then
         status_message error "No network data available for export"
         sleep 2
         return
@@ -327,7 +366,9 @@ export_network_data() {
     
     # Get list of targets
     local targets=()
-    mapfile -t targets < <(ls -1 "$DATA_DIR/network")
+    if [ -d "$DATA_DIR/network" ]; then
+        mapfile -t targets < <(ls -1 "$DATA_DIR/network")
+    fi
     
     for i in "${!targets[@]}"; do
         echo -e "$((i+1)). ${targets[$i]}"
@@ -347,7 +388,7 @@ export_network_data() {
         
         # Export filename with timestamp
         local timestamp=$(date +%Y%m%d_%H%M%S)
-        local export_file="$export_dir/${selected_target}_export_$timestamp.tar.gz"
+        local export_file="$export_dir/network_${selected_target}_${timestamp}.tar.gz"
         
         # Create archive
         echo -e "${YELLOW}Creating export archive...${NC}"
@@ -357,7 +398,7 @@ export_network_data() {
             status_message success "Network data exported to $export_file"
             echo
             echo -e "${BLUE}Export contains:${NC}"
-            tar -tzf "$export_file" | grep -v "/$" | head -n 10
+            tar -tzf "$export_file" | grep -v "/$" | head -10
             
             if [[ $(tar -tzf "$export_file" | grep -v "/$" | wc -l) -gt 10 ]]; then
                 echo "... (more files in archive)"
@@ -371,4 +412,34 @@ export_network_data() {
     
     echo
     read -p "Press Enter to continue..." dummy
+}
+
+# Network scanning menu
+network_menu() {
+    display_header
+    echo -e "${BLUE}[🔍] NETWORK SCANNING${NC}"
+    echo -e "1. Port Scan (Single Host)"
+    echo -e "2. Service Detection"
+    echo -e "3. Network Reconnaissance"
+    echo -e "4. Vulnerability Scanning"
+    echo -e "5. Export Network Data"
+    echo -e "9. Back to Main Menu"
+    echo -e "0. Exit"
+    echo
+    
+    read_input "Select option: " option validate_number
+    
+    case $option in
+        1) network_scan ;;
+        2) service_detection ;;
+        3) network_recon ;;
+        4) vulnerability_scan ;;
+        5) export_network_data ;;
+        9) return ;;
+        0) exit 0 ;;
+        *) network_menu ;;
+    esac
+    
+    # Return to network menu after function completes
+    network_menu
 }
