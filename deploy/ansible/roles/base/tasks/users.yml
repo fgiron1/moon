@@ -1,0 +1,55 @@
+---
+# User management tasks
+
+- name: Create system users
+  user:
+    name: "{{ item.name }}"
+    comment: "{{ item.comment | default(omit) }}"
+    shell: "{{ item.shell | default('/bin/bash') }}"
+    groups: "{{ item.groups | default(omit) }}"
+    append: yes
+    password: "{{ item.password | default(omit) }}"
+    create_home: "{{ item.create_home | default(true) }}"
+    home: "{{ item.home | default(omit) }}"
+    system: false
+    state: present
+  loop: "{{ users }}"
+  when: users is defined
+  tags: ['users', 'security']
+
+- name: Set up SSH authorized keys
+  ansible.posix.authorized_key:
+    user: "{{ item.0.name }}"
+    key: "{{ item.1 }}"
+    state: present
+  with_subelements:
+    - "{{ users | selectattr('ssh_key', 'defined') | list }}"
+    - ssh_key
+  when: users is defined
+  tags: ['users', 'ssh', 'security']
+
+- name: Ensure sudoers configuration
+  copy:
+    dest: /etc/sudoers.d/90-campo
+    content: |
+      # Allow members of group sudo to execute any command
+      %sudo   ALL=(ALL:ALL) {{ 'NOPASSWD: ALL' if item.sudo_nopasswd | default(false) else 'ALL' }}
+      
+      # Allow user to run specific commands without password
+      {{ item.name }} ALL=(ALL) {{ 'NOPASSWD: ' if item.sudo_nopasswd | default(false) else '' }}/usr/bin/apt update,/usr/bin/apt upgrade -y,/usr/bin/apt dist-upgrade -y
+    mode: '0440'
+    validate: 'visudo -cf %s'
+  loop: "{{ users | selectattr('groups', 'defined') | selectattr('groups', 'contains', 'sudo') | list }}"
+  when: users is defined
+  tags: ['users', 'sudo', 'security']
+
+- name: Ensure home directory permissions
+  file:
+    path: "{{ item.home }}"
+    owner: "{{ item.name }}"
+    group: "{{ item.name }}"
+    mode: '0750'
+    state: directory
+  loop: "{{ users }}"
+  when: users is defined and item.create_home | default(true)
+  tags: ['users', 'permissions']

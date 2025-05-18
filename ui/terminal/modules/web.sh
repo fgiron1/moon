@@ -3,11 +3,14 @@
 # ui/terminal/modules/web.sh
 # Web analysis module for OSINT Command Center Terminal Interface
 
+# Load helper functions
+source "$SCRIPT_DIR/helpers/helpers.sh"
+
+# Define directories
+WEB_DATA_DIR="${DATA_DIR}/web"
+
 # Container name for web analysis tools
 WEB_CONTAINER="web"
-
-# Directory for web data
-WEB_DATA_DIR="$DATA_DIR/web"
 
 # =====================================
 # Web Analysis Functions
@@ -33,7 +36,7 @@ website_scan() {
   
   # Run httpx in container to verify URL is accessible
   echo -e "${YELLOW}Verifying URL accessibility...${NC}"
-  cmd="httpx -u $url -json -o /opt/osint/data/web/$target_safe/httpx_results.json"
+  cmd="httpx -u $url -json -o $WEB_DATA_DIR/$target_safe/httpx_results.json"
   sudo $CONTAINER_MANAGER exec $WEB_CONTAINER $cmd &
   show_spinner $! "Checking website availability..."
   
@@ -47,7 +50,7 @@ website_scan() {
   # Run nuclei in container for vulnerability scanning (if available)
   if sudo $CONTAINER_MANAGER exec $WEB_CONTAINER which nuclei >/dev/null 2>&1; then
     echo -e "${YELLOW}Running vulnerability scan...${NC}"
-    cmd="nuclei -u $url -severity low,medium,high,critical -json -o /opt/osint/data/web/$target_safe/nuclei_results.json"
+    cmd="nuclei -u $url -severity low,medium,high,critical -json -o $WEB_DATA_DIR/$target_safe/nuclei_results.json"
     sudo $CONTAINER_MANAGER exec $WEB_CONTAINER $cmd &
     show_spinner $! "Scanning for vulnerabilities..."
   fi
@@ -55,7 +58,7 @@ website_scan() {
   # Run hakrawler in container for crawling (if available)
   if sudo $CONTAINER_MANAGER exec $WEB_CONTAINER which hakrawler >/dev/null 2>&1; then
     echo -e "${YELLOW}Crawling website...${NC}"
-    cmd="bash -c 'echo $url | hakrawler -depth 2 -js -plain > /opt/osint/data/web/$target_safe/hakrawler_results.txt'"
+    cmd="bash -c 'echo $url | hakrawler -depth 2 -js -plain > $WEB_DATA_DIR/$target_safe/hakrawler_results.txt'"
     sudo $CONTAINER_MANAGER exec $WEB_CONTAINER $cmd &
     show_spinner $! "Crawling and discovering website assets..."
   fi
@@ -140,7 +143,7 @@ tech_detection() {
   # Run whatweb in container (if available)
   if sudo $CONTAINER_MANAGER exec $WEB_CONTAINER which whatweb >/dev/null 2>&1; then
     echo -e "${YELLOW}Detecting website technologies with WhatWeb...${NC}"
-    cmd="whatweb -a 3 --log-json=/opt/osint/data/web/$target_safe/whatweb_results.json $url"
+    cmd="whatweb -a 3 --log-json=$WEB_DATA_DIR/$target_safe/whatweb_results.json $url"
     sudo $CONTAINER_MANAGER exec $WEB_CONTAINER $cmd &
     show_spinner $! "Analyzing website technologies..."
   fi
@@ -148,7 +151,7 @@ tech_detection() {
   # Run httpx with tech detection (if available)
   if sudo $CONTAINER_MANAGER exec $WEB_CONTAINER which httpx >/dev/null 2>&1; then
     echo -e "${YELLOW}Running additional technology detection with httpx...${NC}"
-    cmd="httpx -u $url -json -o /opt/osint/data/web/$target_safe/httpx_tech_results.json -tech-detect"
+    cmd="httpx -u $url -json -o $WEB_DATA_DIR/$target_safe/httpx_tech_results.json -tech-detect"
     sudo $CONTAINER_MANAGER exec $WEB_CONTAINER $cmd &
     show_spinner $! "Identifying technologies and frameworks..."
   fi
@@ -241,7 +244,7 @@ content_discovery() {
   # Run feroxbuster in container (if available)
   if sudo $CONTAINER_MANAGER exec $WEB_CONTAINER which feroxbuster >/dev/null 2>&1; then
     echo -e "${YELLOW}Running directory brute force with feroxbuster...${NC}"
-    cmd="feroxbuster --url $url --depth 2 --silent -o /opt/osint/data/web/$target_safe/ferox_results.txt"
+    cmd="feroxbuster --url $url --depth 2 --silent -o $WEB_DATA_DIR/$target_safe/ferox_results.txt"
     sudo $CONTAINER_MANAGER exec $WEB_CONTAINER $cmd &
     show_spinner $! "Discovering hidden directories and files..."
   fi
@@ -249,7 +252,7 @@ content_discovery() {
   # Run hakrawler in container for JS file discovery (if available)
   if sudo $CONTAINER_MANAGER exec $WEB_CONTAINER which hakrawler >/dev/null 2>&1; then
     echo -e "${YELLOW}Discovering JavaScript files...${NC}"
-    cmd="bash -c 'echo $url | hakrawler -depth 2 -js > /opt/osint/data/web/$target_safe/js_files.txt'"
+    cmd="bash -c 'echo $url | hakrawler -depth 2 -js > $WEB_DATA_DIR/$target_safe/js_files.txt'"
     sudo $CONTAINER_MANAGER exec $WEB_CONTAINER $cmd &
     show_spinner $! "Finding JavaScript files..."
   fi

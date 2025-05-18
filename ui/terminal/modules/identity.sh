@@ -3,11 +3,20 @@
 # ui/terminal/modules/identity.sh
 # Identity research module for OSINT Command Center Terminal Interface
 
+# Identity Module
+# Handles identity investigation tasks
+
+# Load helper functions
+source "$SCRIPT_DIR/helpers/helpers.sh"
+
+# Define directories
+IDENTITY_DATA_DIR="${DATA_DIR}/identity"
+
 # Container name for identity research tools
 IDENTITY_CONTAINER="identity"
 
 # Directory for identity data
-IDENTITY_DATA_DIR="$DATA_DIR/identity"
+IDENTITY_DATA_DIR="${DATA_DIR}/identity"
 
 # =====================================
 # Identity Research Functions
@@ -32,14 +41,14 @@ username_search() {
   
   # Run sherlock in container
   echo -e "${YELLOW}Running Sherlock search...${NC}"
-  cmd="sherlock $username --output /opt/osint/data/identity/username/$username/sherlock_results.txt"
+  cmd="sherlock $username --output $IDENTITY_DATA_DIR/username/$username/sherlock_results.txt"
   sudo $CONTAINER_MANAGER exec $IDENTITY_CONTAINER $cmd &
   show_spinner $! "Searching for username across platforms..."
   
   # Run maigret in container (if available)
   if sudo $CONTAINER_MANAGER exec $IDENTITY_CONTAINER which maigret >/dev/null 2>&1; then
     echo -e "${YELLOW}Running Maigret search...${NC}"
-    cmd="maigret $username --output /opt/osint/data/identity/username/$username/maigret_results.json --json"
+    cmd="maigret $username --output $IDENTITY_DATA_DIR/username/$username/maigret_results.json --json"
     sudo $CONTAINER_MANAGER exec $IDENTITY_CONTAINER $cmd &
     show_spinner $! "Performing advanced username search..."
   fi
@@ -116,7 +125,7 @@ email_investigation() {
   # Run holehe in container (if available)
   if sudo $CONTAINER_MANAGER exec $IDENTITY_CONTAINER which holehe >/dev/null 2>&1; then
     echo -e "${YELLOW}Running Holehe to find accounts...${NC}"
-    cmd="holehe $email --output /opt/osint/data/identity/email/$email/holehe_results.json"
+    cmd="holehe $email --output $IDENTITY_DATA_DIR/email/$email/holehe_results.json"
     sudo $CONTAINER_MANAGER exec $IDENTITY_CONTAINER $cmd &
     show_spinner $! "Searching for accounts using this email..."
   else
@@ -187,13 +196,13 @@ phone_analysis() {
   # Run phoneinfoga in container (if available)
   if sudo $CONTAINER_MANAGER exec $IDENTITY_CONTAINER which phoneinfoga >/dev/null 2>&1; then
     echo -e "${YELLOW}Running PhoneInfoga analysis...${NC}"
-    cmd="phoneinfoga scan -n $phone -o /opt/osint/data/identity/phone/$phone/phoneinfoga_results.json"
+    cmd="phoneinfoga scan -n $phone -o $IDENTITY_DATA_DIR/phone/$phone/phoneinfoga_results.json"
     sudo $CONTAINER_MANAGER exec $IDENTITY_CONTAINER $cmd &
     show_spinner $! "Analyzing phone number data..."
   else
     # Try alternate tools if phoneinfoga is not available
     echo -e "${YELLOW}PhoneInfoga not found, trying alternative tools...${NC}"
-    cmd="python3 -c \"import json; data = {'number': {'format': '$phone', 'local_format': '${phone:1}', 'country': 'Unknown'}, 'carrier': '', 'reputation': {}}; print(json.dumps(data))\" > /opt/osint/data/identity/phone/$phone/phone_results.json"
+    cmd="python3 -c \"import json; data = {'number': {'format': '$phone', 'local_format': '${phone:1}', 'country': 'Unknown'}, 'carrier': '', 'reputation': {}}; print(json.dumps(data))\" > $IDENTITY_DATA_DIR/phone/$phone/phone_results.json"
     sudo $CONTAINER_MANAGER exec $IDENTITY_CONTAINER $cmd &
     show_spinner $! "Analyzing phone number data..."
   fi
@@ -253,13 +262,13 @@ social_media_discovery() {
   # Run bbot in container (if available)
   if sudo $CONTAINER_MANAGER exec $IDENTITY_CONTAINER which bbot >/dev/null 2>&1; then
     echo -e "${YELLOW}Running bbot social module...${NC}"
-    cmd="bbot -t '$target' -m social -f json -o /opt/osint/data/identity/social/$target_safe/bbot_social.json"
+    cmd="bbot -t '$target' -m social -f json -o $IDENTITY_DATA_DIR/social/$target_safe/bbot_social.json"
     sudo $CONTAINER_MANAGER exec $IDENTITY_CONTAINER $cmd &
     show_spinner $! "Discovering social media profiles..."
   else
     # Try sherlock as alternative
     echo -e "${YELLOW}BBOT not found, using Sherlock instead...${NC}"
-    cmd="sherlock '$target' --output /opt/osint/data/identity/social/$target_safe/sherlock_social.txt"
+    cmd="sherlock '$target' --output $IDENTITY_DATA_DIR/social/$target_safe/sherlock_social.txt"
     sudo $CONTAINER_MANAGER exec $IDENTITY_CONTAINER $cmd &
     show_spinner $! "Discovering social media profiles..."
   fi

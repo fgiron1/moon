@@ -3,8 +3,34 @@
 # ui/terminal/main.sh
 # Main entry point for OSINT Command Center Terminal Interface
 
+# Load environment variables
+if [ -f "$PWD/../../.env" ]; then
+    source "$PWD/../../.env"
+elif [ -f "/etc/osint/.env" ]; then
+    source "/etc/osint/.env"
+fi
+
+# Set defaults if not defined in .env
+export DATA_DIR="${DATA_DIR:-/opt/osint/data}"
+export LOG_DIR="${LOG_DIR:-/opt/osint/logs}"
+
+# Define module data directories
+export WEB_DATA_DIR="$DATA_DIR/web"
+export NETWORK_DATA_DIR="$DATA_DIR/network"
+export IDENTITY_DATA_DIR="$DATA_DIR/identity"
+export DOMAIN_DATA_DIR="$DATA_DIR/domain"
+
+# Ensure all required directories exist
+mkdir -p "$DATA_DIR" "$LOG_DIR" "$WEB_DATA_DIR" "$NETWORK_DATA_DIR" "$IDENTITY_DATA_DIR" "$DOMAIN_DATA_DIR"
+
+# Set proper permissions
+chmod -R 750 "$DATA_DIR"
+chmod -R 750 "$LOG_DIR"
+
+# Log environment settings
+log_message "Starting OSINT Terminal with DATA_DIR=$DATA_DIR and LOG_DIR=$LOG_DIR"
+
 # Configuration
-DATA_DIR="/opt/osint/data"
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 MODULES_DIR="$SCRIPT_DIR/modules"
 HELPERS_DIR="$SCRIPT_DIR/helpers"

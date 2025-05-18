@@ -1,5 +1,17 @@
 ## Common variables for Moon Security Platform
 
+## User Configuration
+users:
+  - name: campo
+    comment: "OSINT Command Center User"
+    shell: /bin/bash
+    groups: sudo
+    sudo_nopasswd: false
+    create_home: true
+    home: /home/campo
+    ssh_key: "{{ lookup('env', 'SSH_PUBLIC_KEY') | default(omit) }}"
+    password: "{{ lookup('env', 'CAMPO_PASSWORD') | default('changeme' | password_hash('sha512')) }}"
+
 ## Security Configuration
 security:
   # SSH Configuration

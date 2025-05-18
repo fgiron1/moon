@@ -3,11 +3,17 @@
 # ui/terminal/modules/network.sh
 # Network scanning module for OSINT Command Center Terminal Interface
 
+# Network Module
+# Handles network reconnaissance tasks
+
+# Load helper functions
+source "$SCRIPT_DIR/helpers/helpers.sh"
+
+# Define directories
+NETWORK_DATA_DIR="${DATA_DIR}/network"
+
 # Container name for network scanning tools
 NETWORK_CONTAINER="network"
-
-# Directory for network data
-NETWORK_DATA_DIR="$DATA_DIR/network"
 
 # =====================================
 # Network Scanning Functions
@@ -49,7 +55,7 @@ network_scan() {
     1)
       # Quick scan
       echo -e "${YELLOW}Running quick port scan...${NC}"
-      cmd="rustscan -a $target --ulimit 5000 --batch-size 2500 --no-nmap -- -oX /opt/osint/data/network/$target_safe/quick_scan.xml"
+      cmd="rustscan -a $target --ulimit 5000 --batch-size 2500 --no-nmap -- -oX $NETWORK_DATA_DIR/$target_safe/quick_scan.xml"
       sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER $cmd &
       show_spinner $! "Scanning top 1000 ports..."
       scan_file="$target_dir/quick_scan.xml"
@@ -57,7 +63,7 @@ network_scan() {
     2)
       # Full scan
       echo -e "${YELLOW}Running full port scan...${NC}"
-      cmd="rustscan -a $target --ulimit 5000 --batch-size 2500 --range 1-65535 --no-nmap -- -oX /opt/osint/data/network/$target_safe/full_scan.xml"
+      cmd="rustscan -a $target --ulimit 5000 --batch-size 2500 --range 1-65535 --no-nmap -- -oX $NETWORK_DATA_DIR/$target_safe/full_scan.xml"
       sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER $cmd &
       show_spinner $! "Scanning all ports..."
       scan_file="$target_dir/full_scan.xml"
@@ -65,7 +71,7 @@ network_scan() {
     3)
       # Comprehensive scan
       echo -e "${YELLOW}Running comprehensive port scan...${NC}"
-      cmd="rustscan -a $target --ulimit 5000 --batch-size 2500 --range 1-65535 --no-nmap -- -sV -sC -A -oX /opt/osint/data/network/$target_safe/comprehensive_scan.xml"
+      cmd="rustscan -a $target --ulimit 5000 --batch-size 2500 --range 1-65535 --no-nmap -- -sV -sC -A -oX $NETWORK_DATA_DIR/$target_safe/comprehensive_scan.xml"
       sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER $cmd &
       show_spinner $! "Scanning all ports with service detection and scripts..."
       scan_file="$target_dir/comprehensive_scan.xml"
@@ -105,10 +111,10 @@ network_scan() {
       # Generate a readable report
       if command -v xmllint >/dev/null 2>&1; then
         # Using xmllint for better parsing
-        sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "xsltproc /opt/osint/data/network/$target_safe/$(basename "$scan_file") -o /opt/osint/data/network/$target_safe/scan_report.html"
+        sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "xsltproc $NETWORK_DATA_DIR/$target_safe/$(basename "$scan_file") -o $NETWORK_DATA_DIR/$target_safe/scan_report.html"
         
         # Extract service info
-        sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "grep -A2 'state=\"open\"' /opt/osint/data/network/$target_safe/$(basename "$scan_file") | grep -E 'portid=|service name=' | tr '\n' ' ' | sed 's/<port/\n<port/g' | head -10" | \
+        sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "grep -A2 'state=\"open\"' $NETWORK_DATA_DIR/$target_safe/$(basename "$scan_file") | grep -E 'portid=|service name=' | tr '\n' ' ' | sed 's/<port/\n<port/g' | head -10" | \
           sed -E 's/.*portid="([0-9]+)".*name="([^"]*)".*product="([^"]*)".*/Port \1: \2 (\3)/g; s/.*portid="([0-9]+)".*name="([^"]*)".*/Port \1: \2/g'
       else
         # Fallback to simpler parsing
@@ -179,7 +185,7 @@ service_detection() {
   
   # Run nmap service detection
   echo -e "${YELLOW}Running service version detection...${NC}"
-  cmd="nmap $port_param -sV -sC $target -oX /opt/osint/data/network/$target_safe/service_detection.xml"
+  cmd="nmap $port_param -sV -sC $target -oX $NETWORK_DATA_DIR/$target_safe/service_detection.xml"
   sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER $cmd &
   show_spinner $! "Detecting service versions..."
   
@@ -195,7 +201,7 @@ service_detection() {
     
     if command -v xmllint >/dev/null 2>&1; then
       # Using xmllint for better parsing if available
-      sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "grep -A5 'state=\"open\"' /opt/osint/data/network/$target_safe/service_detection.xml | grep -E 'portid=|service name=|product=|version=' | tr '\n' ' ' | sed 's/<port/\n<port/g'" | \
+      sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "grep -A5 'state=\"open\"' $NETWORK_DATA_DIR/$target_safe/service_detection.xml | grep -E 'portid=|service name=|product=|version=' | tr '\n' ' ' | sed 's/<port/\n<port/g'" | \
         sed -E 's/.*portid="([^"]+)".*name="([^"]+)".*product="([^"]*)".*version="([^"]*)".*/Port \1: \2 \3 \4/g; s/.*portid="([^"]+)".*name="([^"]+)".*/Port \1: \2/g' | \
         sort -n -k2 -t ' '
     else
@@ -211,7 +217,7 @@ service_detection() {
     
     # Generate HTML report if xsltproc is available
     if sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER which xsltproc >/dev/null 2>&1; then
-      sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "xsltproc /opt/osint/data/network/$target_safe/service_detection.xml -o /opt/osint/data/network/$target_safe/service_report.html"
+      sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "xsltproc $NETWORK_DATA_DIR/$target_safe/service_detection.xml -o $NETWORK_DATA_DIR/$target_safe/service_report.html"
       echo
       echo -e "${BLUE}HTML report generated:${NC} $target_dir/service_report.html"
     fi
@@ -243,7 +249,7 @@ network_recon() {
   
   # Run host discovery
   echo -e "${YELLOW}Running host discovery...${NC}"
-  cmd="nmap -sn $target -oX /opt/osint/data/network/$target_safe/host_discovery.xml"
+  cmd="nmap -sn $target -oX $NETWORK_DATA_DIR/$target_safe/host_discovery.xml"
   sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER $cmd &
   show_spinner $! "Discovering hosts on the network..."
   
@@ -256,7 +262,7 @@ network_recon() {
     # Extract host info
     if command -v xmllint >/dev/null 2>&1; then
       # Using xmllint for better parsing if available
-      live_hosts=$(sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "grep -A1 \"status state=\\\"up\\\"\" /opt/osint/data/network/$target_safe/host_discovery.xml | grep \"addr=\" | sed -E 's/.*addr=\"([^\"]+)\".*/\1/g'")
+      live_hosts=$(sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "grep -A1 \"status state=\\\"up\\\"\" $NETWORK_DATA_DIR/$target_safe/host_discovery.xml | grep \"addr=\" | sed -E 's/.*addr=\"([^\"]+)\".*/\1/g'")
     else
       # Fallback to simpler parsing
       live_hosts=$(sudo grep -A1 "status state=\"up\"" "$target_dir/host_discovery.xml" | \
@@ -291,7 +297,7 @@ network_recon() {
         # Prepare comma-separated list of hosts
         live_hosts_param=$(echo "$live_hosts" | tr '\n' ',' | sed 's/,$//')
         
-        cmd="nmap -sV -sC -oX /opt/osint/data/network/$target_safe/service_scan.xml $live_hosts_param"
+        cmd="nmap -sV -sC -oX $NETWORK_DATA_DIR/$target_safe/service_scan.xml $live_hosts_param"
         sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER $cmd &
         show_spinner $! "Scanning services on live hosts..."
         
@@ -302,11 +308,11 @@ network_recon() {
           echo -e "${BLUE}Notable services:${NC}"
           
           # Extract interesting services (web servers, SSH, etc.)
-          sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "grep -A5 -E 'service name=\"http|service name=\"ssh|service name=\"ftp|service name=\"smtp|service name=\"dns' /opt/osint/data/network/$target_safe/service_scan.xml | grep -E 'addr=|portid=|service name=' | tr '\n' ' ' | sed 's/<host/\n<host/g' | grep 'state=\"open\"' | sed -E 's/.*addr=\"([^\"]+)\".*portid=\"([^\"]+)\".*name=\"([^\"]+)\".*/Host \1:\tPort \2 (\3)/g' | sort | head -20"
+          sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "grep -A5 -E 'service name=\"http|service name=\"ssh|service name=\"ftp|service name=\"smtp|service name=\"dns' $NETWORK_DATA_DIR/$target_safe/service_scan.xml | grep -E 'addr=|portid=|service name=' | tr '\n' ' ' | sed 's/<host/\n<host/g' | grep 'state=\"open\"' | sed -E 's/.*addr=\"([^\"]+)\".*portid=\"([^\"]+)\".*name=\"([^\"]+)\".*/Host \1:\tPort \2 (\3)/g' | sort | head -20"
           
           # Generate HTML report if xsltproc is available
           if sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER which xsltproc >/dev/null 2>&1; then
-            sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "xsltproc /opt/osint/data/network/$target_safe/service_scan.xml -o /opt/osint/data/network/$target_safe/network_services.html"
+            sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "xsltproc $NETWORK_DATA_DIR/$target_safe/service_scan.xml -o $NETWORK_DATA_DIR/$target_safe/network_services.html"
             echo
             echo -e "${BLUE}HTML report generated:${NC} $target_dir/network_services.html"
           fi
@@ -363,7 +369,7 @@ vulnerability_scan() {
   
   # Run nmap with vulnerability scripts
   echo -e "${YELLOW}Running vulnerability scan...${NC}"
-  cmd="nmap -sV --script vuln $target -oX /opt/osint/data/network/$target_safe/vuln_scan.xml"
+  cmd="nmap -sV --script vuln $target -oX $NETWORK_DATA_DIR/$target_safe/vuln_scan.xml"
   sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER $cmd &
   show_spinner $! "Scanning for vulnerabilities..."
   
@@ -378,11 +384,11 @@ vulnerability_scan() {
     echo
     
     # Extract script output with vulnerabilities
-    sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "grep -A10 \"id=\\\"vuln\" /opt/osint/data/network/$target_safe/vuln_scan.xml | grep -E 'id=\\\"[^\\\"]*\\\"|output=' | tr '\n' ' ' | sed 's/<script/\n<script/g' | grep 'output=' | sed -E 's/.*id=\"([^\"]+)\".*output=\"([^\"]+)\".*/\1: \2/g' | sed -E 's/&lt;/</g' | sed -E 's/&gt;/>/g' | sed -E 's/&quot;/\"/g' | head -20"
+    sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "grep -A10 \"id=\\\"vuln\" $NETWORK_DATA_DIR/$target_safe/vuln_scan.xml | grep -E 'id=\\\"[^\\\"]*\\\"|output=' | tr '\n' ' ' | sed 's/<script/\n<script/g' | grep 'output=' | sed -E 's/.*id=\"([^\"]+)\".*output=\"([^\"]+)\".*/\1: \2/g' | sed -E 's/&lt;/</g' | sed -E 's/&gt;/>/g' | sed -E 's/&quot;/\"/g' | head -20"
     
     # Generate HTML report if xsltproc is available
     if sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER which xsltproc >/dev/null 2>&1; then
-      sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "xsltproc /opt/osint/data/network/$target_safe/vuln_scan.xml -o /opt/osint/data/network/$target_safe/vuln_report.html"
+      sudo $CONTAINER_MANAGER exec $NETWORK_CONTAINER bash -c "xsltproc $NETWORK_DATA_DIR/$target_safe/vuln_scan.xml -o $NETWORK_DATA_DIR/$target_safe/vuln_report.html"
       echo
       echo -e "${BLUE}HTML report generated:${NC} $target_dir/vuln_report.html"
     fi

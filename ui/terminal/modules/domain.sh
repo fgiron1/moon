@@ -3,11 +3,17 @@
 # ui/terminal/modules/domain.sh
 # Domain intelligence module for OSINT Command Center Terminal Interface
 
+# Domain Module
+# Handles domain analysis tasks
+
+# Load helper functions
+source "$SCRIPT_DIR/helpers/helpers.sh"
+
+# Define directories
+DOMAIN_DATA_DIR="${DATA_DIR}/domain"
+
 # Container name for domain intelligence tools
 DOMAIN_CONTAINER="domain"
-
-# Directory for domain data
-DOMAIN_DATA_DIR="$DATA_DIR/domain"
 
 # =====================================
 # Domain Intelligence Functions
@@ -32,20 +38,20 @@ domain_recon() {
   
   # Run amass in container for passive enumeration
   echo -e "${YELLOW}Running Amass passive scan...${NC}"
-  amass_cmd="amass enum -passive -d $domain -o /opt/osint/data/domain/$domain/amass_passive.txt"
+  amass_cmd="amass enum -passive -d $domain -o $DOMAIN_DATA_DIR/$domain/amass_passive.txt"
   sudo $CONTAINER_MANAGER exec $DOMAIN_CONTAINER $amass_cmd &
   show_spinner $! "Gathering passive reconnaissance data..."
   
   # Run subfinder in container for subdomain discovery
   echo -e "${YELLOW}Running Subfinder scan...${NC}"
-  subfinder_cmd="subfinder -d $domain -o /opt/osint/data/domain/$domain/subfinder.txt"
+  subfinder_cmd="subfinder -d $domain -o $DOMAIN_DATA_DIR/$domain/subfinder.txt"
   sudo $CONTAINER_MANAGER exec $DOMAIN_CONTAINER $subfinder_cmd &
   show_spinner $! "Discovering subdomains..."
   
   # Run dnsx in container for DNS resolution if available
   if sudo $CONTAINER_MANAGER exec $DOMAIN_CONTAINER which dnsx >/dev/null 2>&1; then
     echo -e "${YELLOW}Running DNS resolution...${NC}"
-    dnsx_cmd="dnsx -l /opt/osint/data/domain/$domain/subfinder.txt -json -o /opt/osint/data/domain/$domain/dns_resolution.json"
+    dnsx_cmd="dnsx -l $DOMAIN_DATA_DIR/$domain/subfinder.txt -json -o $DOMAIN_DATA_DIR/$domain/dns_resolution.json"
     sudo $CONTAINER_MANAGER exec $DOMAIN_CONTAINER $dnsx_cmd &
     show_spinner $! "Resolving DNS records..."
   fi
@@ -99,7 +105,7 @@ subdomain_enum() {
     1)
       # Passive enumeration
       echo -e "${YELLOW}Running passive subdomain enumeration...${NC}"
-      cmd="subfinder -d $domain -o /opt/osint/data/domain/$domain/passive_subdomains.txt"
+      cmd="subfinder -d $domain -o $DOMAIN_DATA_DIR/$domain/passive_subdomains.txt"
       sudo $CONTAINER_MANAGER exec $DOMAIN_CONTAINER $cmd &
       show_spinner $! "Gathering subdomain intelligence..."
       result_file="$target_dir/passive_subdomains.txt"
@@ -107,7 +113,7 @@ subdomain_enum() {
     2)
       # Active enumeration
       echo -e "${YELLOW}Running active subdomain enumeration...${NC}"
-      cmd="amass enum -active -d $domain -o /opt/osint/data/domain/$domain/active_subdomains.txt"
+      cmd="amass enum -active -d $domain -o $DOMAIN_DATA_DIR/$domain/active_subdomains.txt"
       sudo $CONTAINER_MANAGER exec $DOMAIN_CONTAINER $cmd &
       show_spinner $! "Actively enumerating subdomains..."
       result_file="$target_dir/active_subdomains.txt"
@@ -115,7 +121,7 @@ subdomain_enum() {
     3)
       # Aggressive enumeration
       echo -e "${YELLOW}Running aggressive subdomain enumeration...${NC}"
-      cmd="amass enum -active -brute -d $domain -o /opt/osint/data/domain/$domain/aggressive_subdomains.txt"
+      cmd="amass enum -active -brute -d $domain -o $DOMAIN_DATA_DIR/$domain/aggressive_subdomains.txt"
       sudo $CONTAINER_MANAGER exec $DOMAIN_CONTAINER $cmd &
       show_spinner $! "Aggressively enumerating subdomains..."
       result_file="$target_dir/aggressive_subdomains.txt"
@@ -168,7 +174,7 @@ dns_analysis() {
   
   # Run DNS analysis
   echo -e "${YELLOW}Running DNS record analysis...${NC}"
-  cmd="bash -c \"echo $domain | dnsx -a -aaaa -cname -mx -ns -soa -txt -json -o /opt/osint/data/domain/$domain/dns_records.json\""
+  cmd="bash -c \"echo $domain | dnsx -a -aaaa -cname -mx -ns -soa -txt -json -o $DOMAIN_DATA_DIR/$domain/dns_records.json\""
   sudo $CONTAINER_MANAGER exec $DOMAIN_CONTAINER $cmd &
   show_spinner $! "Retrieving DNS records..."
   

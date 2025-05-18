@@ -74,20 +74,56 @@ class OSINTCorrelator:
             logger.info(f"Connected to Neo4j at {neo4j_uri}")
         except Exception as e:
             sentry_sdk.capture_exception(e)
-            logger.error(f"Neo4j connection failed: {e}")
+            self.logger.error(f"Neo4j connection failed: {e}")
             raise
+
+    def _setup_logging(self, log_level: str) -> logging.Logger:
+        """Set up logging configuration.
+        
+        Args:
+            log_level: Logging level as string
+            
+        Returns:
+            Configured logger instance
+        """
+        logger = logging.getLogger("osint_correlator")
+        logger.setLevel(log_level)
+        
+        # Create logs directory if it doesn't exist
+        os.makedirs(self.log_dir, exist_ok=True)
+        
+        # Create file handler which logs messages
+        log_file = os.path.join(self.log_dir, "correlator.log")
+        fh = logging.FileHandler(log_file)
+        fh.setLevel(log_level)
+        
+        # Create console handler with a higher log level
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.ERROR)
+        
+        # Create formatter and add it to the handlers
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        fh.setFormatter(formatter)
+        ch.setFormatter(formatter)
+        
+        # Add the handlers to the logger
+        logger.addHandler(fh)
+        logger.addHandler(ch)
+        
+        return logger
 
     def process_data_folder(
         self, 
         target_name: str, 
-        data_dir: str = "/opt/osint/data",
         batch_size: int = 1000
     ) -> bool:
         """Process data with batching"""
-        target_dir = os.path.join(data_dir, "targets", target_name)
+        target_dir = os.path.join(self.data_dir, "targets", target_name)
         
         if not os.path.exists(target_dir):
-            logger.error(f"Target directory not found: {target_dir}")
+            self.logger.error(f"Target directory not found: {target_dir}")
             return False
         
         try:
@@ -97,7 +133,7 @@ class OSINTCorrelator:
                 for f in files if f.endswith(('.json', '.csv', '.txt', '.xml'))
             ]
             
-            logger.info(f"Found {len(files)} files to process")
+            self.logger.info(f"Found {len(files)} files to process")
             
             for i in range(0, len(files), batch_size):
                 batch_files = files[i:i+batch_size]
@@ -107,7 +143,7 @@ class OSINTCorrelator:
         
         except Exception as e:
             sentry_sdk.capture_exception(e)
-            logger.error(f"Error processing data folder: {e}")
+            self.logger.error(f"Error processing data folder: {e}")
             return False
 
     def _process_file_batch(self, files, target_name):
@@ -127,7 +163,7 @@ class OSINTCorrelator:
                         self._process_csv_data(session, df, target_name)
                     
                 except Exception as e:
-                    logger.warning(f"Error processing {file_path}: {e}")
+                    self.logger.warning(f"Error processing {file_path}: {e}")
                     sentry_sdk.capture_exception(e)
 
     def _process_json_data(self, session, data, target_name):
@@ -142,14 +178,14 @@ class OSINTCorrelator:
                     entity = EntityModel(**entity_data)
                     self._create_entity_node(session, entity, target_name)
                 except ValidationError as e:
-                    logger.warning(f"Invalid entity: {e}")
+                    self.logger.warning(f"Invalid entity: {e}")
             
             # Process relationships
             for rel_data in relationships:
                 self._create_relationship(session, rel_data)
         
         except Exception as e:
-            logger.error(f"JSON data processing error: {e}")
+            self.logger.error(f"JSON data processing error: {e}")
             sentry_sdk.capture_exception(e)
 
     def _create_entity_node(self, session, entity, target_name):
