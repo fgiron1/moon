@@ -1,7 +1,0 @@
----
-- name: Configure privacy and security enhancements
-  hosts: osint_servers
-  become: yes
-  roles:
-    - privacy
-    - personal_safety

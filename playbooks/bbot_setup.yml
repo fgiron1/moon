@@ -1,6 +1,0 @@
----
-- name: Install and configure bbot
-  hosts: osint_servers
-  become: yes
-  roles:
-    - bbot

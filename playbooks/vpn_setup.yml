@@ -1,6 +1,0 @@
----
-- name: Configure VPN
-  hosts: osint_servers
-  become: yes
-  roles:
-    - vpn

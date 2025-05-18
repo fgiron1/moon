@@ -1,6 +1,0 @@
----
-- name: User management
-  hosts: osint_servers
-  become: yes
-  roles:
-    - user_management

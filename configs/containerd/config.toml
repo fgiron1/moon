@@ -1,0 +1,106 @@
+# Enhanced containerd configuration for OSINT Command Center with security hardening
+
+version = 2
+
+# Root directory for containerd metadata
+root = "/var/lib/containerd"
+# State directory for containerd state
+state = "/run/containerd"
+# Path to containerd socket
+address = "/run/containerd/containerd.sock"
+
+# grpc configuration
+[grpc]
+  address = "/run/containerd/containerd.sock"
+  uid = 0
+  gid = 0
+  max_recv_message_size = 16777216
+  max_send_message_size = 16777216
+
+# ttrpc configuration
+[ttrpc]
+  address = ""
+  uid = 0
+  gid = 0
+
+# debug configuration - reduce logging level for production
+[debug]
+  address = ""
+  uid = 0
+  gid = 0
+  level = "info"
+
+# metrics configuration
+[metrics]
+  address = "127.0.0.1:1338"  # Only listen on localhost
+  grpc_histogram = false
+
+# plugins configuration
+[plugins]
+  [plugins."io.containerd.grpc.v1.cri"]
+    # Enable seccomp by default
+    enable_selinux = false
+    enable_apparmor = true
+    restrict_oom_score_adj = true
+    
+    # Ensure proper pod isolation
+    max_container_log_line_size = 16384
+    
+    # Sandbox image settings
+    sandbox_image = "k8s.gcr.io/pause:3.5"
+    
+    # Enable container streaming
+    stream_server_address = "127.0.0.1"
+    stream_server_port = "0"
+    
+    # Use proper SELinux labeling
+    selinux_category_range = 1024
+    
+    # Limit registry access to necessary ones
+    [plugins."io.containerd.grpc.v1.cri".registry]
+      [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+          endpoint = ["https://registry-1.docker.io"]
+
+    # Configure container network
+    [plugins."io.containerd.grpc.v1.cri".cni]
+      bin_dir = "/opt/cni/bin"
+      conf_dir = "/etc/cni/net.d"
+      
+      # Isolate pods in their own network namespace
+      max_conf_num = 1
+
+  # Configure the default container runtime
+  [plugins."io.containerd.grpc.v1.cri".containerd]
+    discard_unpacked_layers = true
+    snapshotter = "overlayfs"
+    default_runtime_name = "runc"
+    
+    # Configure the runc runtime with security features
+    [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+      runtime_type = "io.containerd.runc.v2"
+      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+        # Enable systemd cgroup driver
+        SystemdCgroup = true
+        # Apply seccomp profile
+        seccompProfilePath = "/etc/containerd/seccomp.json"
+        # Apply AppArmor profiles
+        apparmorProfile = "runtime/default"
+        # Restrict container capabilities 
+        NoNewPrivileges = true
+
+# Stream processor settings
+[stream_processors]
+  [stream_processors."io.containerd.ocicrypt.decoder.v1.tar"]
+    accepts = ["application/vnd.oci.image.layer.v1.tar+encrypted"]
+    returns = ["application/vnd.oci.image.layer.v1.tar"]
+  [stream_processors."io.containerd.ocicrypt.decoder.v1.tar.gzip"]
+    accepts = ["application/vnd.oci.image.layer.v1.tar+gzip+encrypted"]
+    returns = ["application/vnd.oci.image.layer.v1.tar+gzip"]
+
+# Timeouts
+[timeouts]
+  "io.containerd.timeout.shim.cleanup" = "5s"
+  "io.containerd.timeout.shim.load" = "5s"
+  "io.containerd.timeout.shim.shutdown" = "3s"
+  "io.containerd.timeout.task.state" = "2s"
