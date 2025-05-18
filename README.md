@@ -111,9 +111,6 @@ For production deployments, use the automated deployment script:
    
    # Check network configuration
    sudo ./core/network/control.sh status
-   
-   # Access the web interface (if configured)
-   # Default: https://your-server-ip
    ```
 
 ## 🛠️ Core Components
