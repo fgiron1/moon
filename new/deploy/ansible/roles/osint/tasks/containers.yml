@@ -1,0 +1,27 @@
+---
+# Container tools setup
+- name: Create container data directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0755
+  loop:
+    - /opt/osint/containers/base
+    - /opt/osint/containers/domain
+    - /opt/osint/containers/network
+    - /opt/osint/containers/identity
+    - /opt/osint/containers/web
+    - /opt/osint/containers/data
+
+- name: Copy container definitions
+  copy:
+    src: "../core/containers/"
+    dest: "/opt/osint/containers/"
+    mode: 0755
+    directory_mode: 0755
+
+- name: Copy container management script
+  copy:
+    src: "../core/containers/manager.sh"
+    dest: "/opt/osint/scripts/container_manager.sh"
+    mode: 0755

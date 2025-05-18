@@ -1,0 +1,20 @@
+---
+# OSINT tools deployment tasks
+- name: Install OSINT tool dependencies
+  apt:
+    name:
+      - git
+      - python3
+      - python3-pip
+      - python3-venv
+      - nmap
+      - whois
+      - dnsutils
+      - jq
+    state: present
+
+# Include data correlation tasks
+- import_tasks: data_correlation.yml
+
+# Include container tools tasks
+- import_tasks: containers.yml

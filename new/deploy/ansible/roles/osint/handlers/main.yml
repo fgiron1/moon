@@ -1,0 +1,7 @@
+---
+# Handlers for OSINT role
+- name: Restart container services
+  command: /opt/osint/scripts/container_manager.sh restart
+
+- name: Restart Neo4j
+  command: /opt/osint/scripts/neo4j_init.sh

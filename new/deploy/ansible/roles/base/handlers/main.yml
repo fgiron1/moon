@@ -1,0 +1,28 @@
+---
+# Handlers for base role
+- name: Restart containerd
+  systemd:
+    name: containerd
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+
+- name: Restart networking
+  service:
+    name: networking
+    state: restarted
+
+- name: Restart SSH
+  service:
+    name: ssh
+    state: restarted
+
+- name: Restart fail2ban
+  service:
+    name: fail2ban
+    state: restarted
+
+- name: Restart firewall
+  service:
+    name: ufw
+    state: restarted

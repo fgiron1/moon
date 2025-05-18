@@ -1,0 +1,51 @@
+---
+# Global variables for all OSINT servers
+timezone: UTC
+system_locale: en_US.UTF-8
+primary_network_interface: eth0
+server_region: EU
+
+# Base system packages
+system_packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+  - git
+  - python3
+  - python3-pip
+  - python3-venv
+  - net-tools
+  - jq
+  - wget
+  - unzip
+  - zip
+
+# Security baseline
+security:
+  ssh:
+    permit_root_login: "prohibit-password"
+    password_authentication: false
+    max_auth_tries: 3
+    login_grace_time: 30
+  
+  firewall:
+    default_policy: DROP
+    allowed_ports:
+      - 22/tcp  # SSH
+      - 51820/udp  # WireGuard
+      - 8080/tcp  # Web interface
+
+# Network configuration defaults
+network:
+  management_interface: eth0
+  backup_interface: wlan0
+  vpn_interface: wg0
+
+# Performance and resource limits
+system_resources:
+  max_open_files: 65535
+  kernel:
+    overcommit_memory: 1
+    swappiness: 10

@@ -1,0 +1,19 @@
+// Create constraints
+CREATE CONSTRAINT entity_id IF NOT EXISTS ON (e:Entity) ASSERT e.id IS UNIQUE;
+CREATE CONSTRAINT domain_value IF NOT EXISTS ON (d:Domain) ASSERT d.value IS UNIQUE;
+CREATE CONSTRAINT ip_address_value IF NOT EXISTS ON (i:IPAddress) ASSERT i.value IS UNIQUE;
+CREATE CONSTRAINT email_value IF NOT EXISTS ON (e:Email) ASSERT e.value IS UNIQUE;
+CREATE CONSTRAINT username_value IF NOT EXISTS ON (u:Username) ASSERT (u.value, u.platform) IS UNIQUE;
+
+// Create indexes
+CREATE INDEX entity_type IF NOT EXISTS FOR (e:Entity) ON (e.type);
+CREATE INDEX entity_value IF NOT EXISTS FOR (e:Entity) ON (e.value);
+CREATE INDEX entity_confidence IF NOT EXISTS FOR (e:Entity) ON (e.confidence);
+CREATE INDEX entity_source IF NOT EXISTS FOR (e:Entity) ON (e.source);
+
+// Create target nodes index
+CREATE INDEX target_name IF NOT EXISTS FOR (t:Target) ON (t.name);
+
+// Create basic relationship indexes
+CREATE INDEX relationship_type IF NOT EXISTS FOR ()-[r:RELATES_TO]-() ON (r.type);
+CREATE INDEX relationship_confidence IF NOT EXISTS FOR ()-[r:RELATES_TO]-() ON (r.confidence);
