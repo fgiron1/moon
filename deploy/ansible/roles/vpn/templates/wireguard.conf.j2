@@ -1,0 +1,11 @@
+[Interface]
+PrivateKey = {{ mullvad.account.key }}
+Address = {{ wireguard.network.address }}
+MTU = {{ wireguard.security.mtu }}
+SaveConfig = {{ wireguard.security.save_config }}
+
+[Peer]
+PublicKey = {{ mullvad.relay.public_key }}
+Endpoint = {{ mullvad.relay.endpoint }}
+AllowedIPs = 0.0.0.0/0, ::/0
+PersistentKeepalive = 25

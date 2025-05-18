@@ -1,0 +1,67 @@
+---
+- name: Install Mullvad VPN
+  apt:
+    name: 
+      - wireguard-tools
+      - resolvconf
+      - iptables-persistent
+    state: present
+  when: ansible_os_family == 'Debian'
+
+- name: Create WireGuard configuration directory
+  file:
+    path: /etc/wireguard
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Create WireGuard configuration template
+  template:
+    src: wireguard.conf.j2
+    dest: /etc/wireguard/moon.conf
+    mode: '0600'
+  notify: restart wireguard
+
+- name: Enable IP forwarding
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    state: present
+    sysctl_file: /etc/sysctl.d/99-wireguard.conf
+
+- name: Configure firewall for WireGuard
+  ufw:
+    rule: allow
+    port: "{{ wireguard.network.port }}"
+    proto: udp
+    state: enabled
+  notify: restart ufw
+
+- name: Configure DNS settings
+  copy:
+    content: "nameserver {{ item }}\n"
+    dest: /etc/resolv.conf
+    mode: '0644'
+  with_items: "{{ mullvad.security.dns.servers }}"
+
+- name: Enable WireGuard service
+  systemd:
+    name: wg-quick@moon
+    enabled: yes
+    state: started
+
+- name: Verify VPN connection
+  shell: |
+    wg show moon
+  register: vpn_status
+  failed_when: vpn_status.rc != 0
+  changed_when: false
+
+- name: Set up auto-reconnect
+  cron:
+    name: "Mullvad VPN Auto-Reconnect"
+    minute: "*/{{ mullvad.connection.reconnect_timeout }}"
+    job: "systemctl restart wg-quick@moon"
+    state: present
+    user: root

@@ -1,16 +1,16 @@
 #!/bin/bash
 
 # Colors
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+GREEN=\'\033[0;32m\'
+BLUE=\'\033[0;34m\'
+RED=\'\033[0;31m\'
+YELLOW=\'\033[1;33m\'
+NC=\'\033[0m\' # No Color
 
 # Directory structure
 PROJECT_ROOT=$(pwd)
-CREDS_DIR="/opt/osint/secure_creds"
-CONTAINERS_DIR="$PROJECT_ROOT/containers"
+CREDS_DIR="$PROJECT_ROOT/secure_creds"
+ANSIBLE_DIR="$PROJECT_ROOT/deploy/ansible"
 
 # Function to check required tools
 check_prerequisites() {
@@ -18,7 +18,7 @@ check_prerequisites() {
     
     local missing=0
     
-    for cmd in terraform ansible-playbook ssh-keygen; do
+    for cmd in ansible-playbook ssh-keygen; do
         if ! command -v $cmd &> /dev/null; then
             echo -e "${RED}Error: $cmd is not installed${NC}"
             missing=1
@@ -33,63 +33,25 @@ check_prerequisites() {
     echo -e "${GREEN}All prerequisites are installed${NC}"
 }
 
-# Function to load credentials securely
-load_credentials() {
-    echo -e "${BLUE}Loading credentials...${NC}"
+# Function to load environment variables
+load_environment() {
+    echo -e "${BLUE}Loading environment variables...${NC}"
     
-    # Check if .env exists, if so prompt to secure it
-    if [ -f .env ]; then
-        echo -e "${YELLOW}Warning: Unsecured .env file detected${NC}"
-        read -p "Would you like to secure these credentials? [Y/n] " secure_creds
-        
-        if [[ "$secure_creds" != "n" && "$secure_creds" != "N" ]]; then
-            ./scripts/secure_creds.sh
-        fi
+    if [ ! -f ".env" ]; then
+        echo -e "${RED}Error: .env file not found${NC}"
+        echo -e "${YELLOW}Creating .env from template...${NC}"
+        cp .env.template .env
     fi
     
-    # Check if secure credentials exist
-    if [ ! -d "$CREDS_DIR" ]; then
-        echo -e "${YELLOW}No secure credentials found.${NC}"
-        
-        # Prompt for Contabo API credentials
-        read -p "Enter your Contabo API Client ID: " CONTABO_CLIENT_ID
-        read -p "Enter your Contabo API Client Secret: " CONTABO_CLIENT_SECRET
-        read -p "Enter your Contabo API Username: " CONTABO_USERNAME
-        read -sp "Enter your Contabo API Password: " CONTABO_PASSWORD
-        echo
-        
-        # Create secure credentials directory
-        sudo mkdir -p "$CREDS_DIR"
-        sudo chmod 700 "$CREDS_DIR"
-        
-        # Generate a random key for encryption if it doesn't exist
-        if [ ! -f /root/.cred_key ]; then
-            sudo openssl rand -base64 32 | sudo tee /root/.cred_key > /dev/null
-            sudo chmod 600 /root/.cred_key
-        fi
-        
-        # Store credentials securely
-        echo -n "$CONTABO_CLIENT_ID" | sudo openssl enc -aes-256-cbc -salt -out "$CREDS_DIR/CONTABO_CLIENT_ID.enc" -pass file:/root/.cred_key
-        echo -n "$CONTABO_CLIENT_SECRET" | sudo openssl enc -aes-256-cbc -salt -out "$CREDS_DIR/CONTABO_CLIENT_SECRET.enc" -pass file:/root/.cred_key
-        echo -n "$CONTABO_USERNAME" | sudo openssl enc -aes-256-cbc -salt -out "$CREDS_DIR/CONTABO_USERNAME.enc" -pass file:/root/.cred_key
-        echo -n "$CONTABO_PASSWORD" | sudo openssl enc -aes-256-cbc -salt -out "$CREDS_DIR/CONTABO_PASSWORD.enc" -pass file:/root/.cred_key
-        
-        sudo chmod 600 "$CREDS_DIR"/*.enc
-    else
-        # Load credentials from secure storage
-        CONTABO_CLIENT_ID=$(sudo openssl enc -d -aes-256-cbc -in "$CREDS_DIR/CONTABO_CLIENT_ID.enc" -pass file:/root/.cred_key 2>/dev/null)
-        CONTABO_CLIENT_SECRET=$(sudo openssl enc -d -aes-256-cbc -in "$CREDS_DIR/CONTABO_CLIENT_SECRET.enc" -pass file:/root/.cred_key 2>/dev/null)
-        CONTABO_USERNAME=$(sudo openssl enc -d -aes-256-cbc -in "$CREDS_DIR/CONTABO_USERNAME.enc" -pass file:/root/.cred_key 2>/dev/null)
-        CONTABO_PASSWORD=$(sudo openssl enc -d -aes-256-cbc -in "$CREDS_DIR/CONTABO_PASSWORD.enc" -pass file:/root/.cred_key 2>/dev/null)
-    fi
-    
-    # Check if we have required credentials
-    if [ -z "$CONTABO_CLIENT_ID" ] || [ -z "$CONTABO_CLIENT_SECRET" ] || [ -z "$CONTABO_USERNAME" ] || [ -z "$CONTABO_PASSWORD" ]; then
-        echo -e "${RED}Error: Missing required Contabo API credentials${NC}"
+    if [ ! -f ".env" ]; then
+        echo -e "${RED}Error: Failed to create .env file${NC}"
         exit 1
     fi
     
-    echo -e "${GREEN}Credentials loaded successfully${NC}"
+    # Load environment variables
+    export $(grep -v '^#' .env | xargs)
+    
+    echo -e "${GREEN}Environment variables loaded successfully${NC}"
 }
 
 # Function to generate SSH key if needed
@@ -99,164 +61,70 @@ generate_ssh_key() {
     SSH_KEY_PATH="$HOME/.ssh/id_ed25519"
     
     if [ ! -f "$SSH_KEY_PATH" ]; then
-        echo -e "${YELLOW}SSH key not found, generating new ED25519 key at $SSH_KEY_PATH${NC}"
-        ssh-keygen -t ed25519 -f "$SSH_KEY_PATH" -N ""
-        echo -e "${GREEN}SSH key generated${NC}"
+        echo -e "${YELLOW}Generating new SSH key...${NC}"
+        ssh-keygen -t ed25519 -f "$SSH_KEY_PATH" -N "" -C "moon_ssh_key"
+        echo -e "${GREEN}SSH key generated successfully${NC}"
     else
-        echo -e "${GREEN}SSH key found at $SSH_KEY_PATH${NC}"
+        echo -e "${GREEN}SSH key already exists${NC}"
     fi
 }
 
-# Function to provision infrastructure
-provision_infrastructure() {
-    echo -e "${BLUE}Provisioning infrastructure...${NC}"
+# Function to run Ansible playbook
+run_ansible() {
+    echo -e "${BLUE}Running Ansible playbook...${NC}"
     
-    # Export credentials for Terraform
-    export TF_VAR_contabo_client_id="$CONTABO_CLIENT_ID"
-    export TF_VAR_contabo_client_secret="$CONTABO_CLIENT_SECRET"
-    export TF_VAR_contabo_username="$CONTABO_USERNAME"
-    export TF_VAR_contabo_password="$CONTABO_PASSWORD"
+    # Run the main playbook
+    ansible-playbook "$ANSIBLE_DIR/playbooks/main.yml" \
+        -i "$ANSIBLE_DIR/inventory/osint_servers.yml" \
+        --private-key="$SSH_KEY_PATH" \
+        -e "@.env"
     
-    # Initialize and apply Terraform
-    echo -e "${YELLOW}Initializing Terraform...${NC}"
-    terraform init
-    
-    echo -e "${YELLOW}Applying Terraform configuration...${NC}"
-    terraform apply -auto-approve
-    
-    # Get server IP
-    SERVER_IP=$(terraform output -raw server_ip)
-    
-    if [ -z "$SERVER_IP" ]; then
-        echo -e "${RED}Error: Failed to get server IP from Terraform${NC}"
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Ansible playbook completed successfully${NC}"
+    else
+        echo -e "${RED}Error: Ansible playbook failed${NC}"
         exit 1
     fi
-    
-    echo -e "${GREEN}Server provisioned with IP: $SERVER_IP${NC}"
-    
-    # Create dynamic Ansible inventory
-    echo -e "${YELLOW}Creating Ansible inventory...${NC}"
-    sed -e "s/{{ server_ip }}/$SERVER_IP/g" \
-        -e "s/{{ server_user }}/root/g" \
-        -e "s|{{ ssh_key_path }}|$HOME/.ssh/id_ed25519|g" \
-        ansible/inventory/hosts.yml.template > ansible/inventory/hosts.yml
 }
 
-# Function to wait for SSH
-wait_for_ssh() {
-    local server_ip=$1
-    local ssh_key="$HOME/.ssh/id_ed25519"
-    local max_attempts=20
-    local attempt=1
+# Function to configure VPN
+configure_vpn() {
+    echo -e "${BLUE}Configuring VPN...${NC}"
     
-    echo -e "${YELLOW}Waiting for SSH to become available on $server_ip...${NC}"
+    # Run VPN specific tasks
+    ansible-playbook "$ANSIBLE_DIR/playbooks/security_enhancements.yml" \
+        -i "$ANSIBLE_DIR/inventory/osint_servers.yml" \
+        --private-key="$SSH_KEY_PATH" \
+        -e "@.env"
     
-    while [ $attempt -le $max_attempts ]; do
-        ssh -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=5 -i "$ssh_key" root@$server_ip echo "SSH connection successful" &>/dev/null
-        
-        if [ $? -eq 0 ]; then
-            echo -e "${GREEN}SSH connection established${NC}"
-            return 0
-        fi
-        
-        echo -e "${YELLOW}Attempt $attempt/$max_attempts - Retrying in 10 seconds...${NC}"
-        sleep 10
-        attempt=$((attempt + 1))
-    done
-    
-    echo -e "${RED}Failed to connect to server via SSH after $max_attempts attempts${NC}"
-    exit 1
-}
-
-# Function to configure server with Ansible
-configure_server() {
-    local server_ip=$1
-    
-    echo -e "${BLUE}Configuring server with Ansible...${NC}"
-    
-    # Run base setup
-    echo -e "${YELLOW}Running base server setup...${NC}"
-    ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/base_setup.yml
-    
-    # Install containerd
-    echo -e "${YELLOW}Installing containerd...${NC}"
-    ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/containerd_setup.yml
-    
-    # Run security hardening
-    echo -e "${YELLOW}Running security hardening...${NC}"
-    ansible-playbook -i ansible/inventory/hosts.yml ansible/playbooks/security.yml
-    
-    echo -e "${GREEN}Server configuration completed${NC}"
-}
-
-# Function to build and deploy containers
-deploy_containers() {
-    local server_ip=$1
-    
-    echo -e "${BLUE}Building and deploying containers...${NC}"
-    
-    # Transfer container definitions
-    echo -e "${YELLOW}Transferring container definitions...${NC}"
-    scp -r -i "$HOME/.ssh/id_ed25519" "$CONTAINERS_DIR" root@$server_ip:/opt/osint/
-    
-    # Build base container
-    echo -e "${YELLOW}Building base container...${NC}"
-    ssh -i "$HOME/.ssh/id_ed25519" root@$server_ip "cd /opt/osint/containers/base && nerdctl build -t osint-base:latest ."
-    
-    # Build tool containers
-    echo -e "${YELLOW}Building tool containers...${NC}"
-    ssh -i "$HOME/.ssh/id_ed25519" root@$server_ip "cd /opt/osint/containers/domain_intel && nerdctl build -t osint-domain-intel:latest ."
-    ssh -i "$HOME/.ssh/id_ed25519" root@$server_ip "cd /opt/osint/containers/network_scan && nerdctl build -t osint-network-scan:latest ."
-    
-    echo -e "${GREEN}Containers built and deployed successfully${NC}"
-}
-
-# Function to configure the network for containers
-configure_network() {
-    local server_ip=$1
-    
-    echo -e "${BLUE}Configuring container networking...${NC}"
-    
-    # Transfer network script
-    scp -i "$HOME/.ssh/id_ed25519" ansible/roles/networking/templates/container_network.sh.j2 root@$server_ip:/usr/local/bin/container-network
-    ssh -i "$HOME/.ssh/id_ed25519" root@$server_ip "chmod +x /usr/local/bin/container-network"
-    
-    # Set up container network
-    ssh -i "$HOME/.ssh/id_ed25519" root@$server_ip "/usr/local/bin/container-network setup eth0"
-    
-    echo -e "${GREEN}Container networking configured successfully${NC}"
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}VPN configuration completed successfully${NC}"
+    else
+        echo -e "${RED}Error: VPN configuration failed${NC}"
+        exit 1
+    fi
 }
 
 # Main function
 main() {
-    echo -e "${BLUE}=================================${NC}"
-    echo -e "${BLUE}  OSINT Command Center Deployment${NC}"
-    echo -e "${BLUE}=================================${NC}"
+    echo -e "${BLUE}Starting Moon deployment...${NC}"
     
+    # Check prerequisites
     check_prerequisites
-    load_credentials
+    
+    # Load environment
+    load_environment
+    
+    # Generate SSH key
     generate_ssh_key
-    provision_infrastructure
     
-    # Get the server IP
-    SERVER_IP=$(terraform output -raw server_ip)
+    # Run main deployment
+    run_ansible
     
-    wait_for_ssh "$SERVER_IP"
-    configure_server "$SERVER_IP"
-    deploy_containers "$SERVER_IP"
-    configure_network "$SERVER_IP"
+    # Configure VPN
+    configure_vpn
     
-    echo -e "${BLUE}=================================${NC}"
-    echo -e "${GREEN}  Deployment Completed Successfully${NC}"
-    echo -e "${BLUE}=================================${NC}"
-    echo -e "Server IP: ${YELLOW}$SERVER_IP${NC}"
-    echo -e "Connect with: ${YELLOW}ssh -i $HOME/.ssh/id_ed25519 root@$SERVER_IP${NC}"
-    echo ""
-    echo -e "${RED}IMPORTANT SECURITY NOTICE:${NC}"
-    echo -e "1. Password authentication has been disabled for SSH (except for campo user)"
-    echo -e "2. All credentials are now stored securely"
-    echo -e "3. Additional security hardening has been applied"
-    echo -e "${BLUE}=================================${NC}"
+    echo -e "${GREEN}Deployment completed successfully!${NC}"
 }
 
 # Run the main function

@@ -10,6 +10,7 @@ import json
 import argparse
 import logging
 from datetime import datetime
+from dotenv import load_dotenv
 from typing import Dict, Any, Optional
 
 # Performance libraries
@@ -55,12 +56,13 @@ class EntityModel(BaseModel):
 class OSINTCorrelator:
     """Enhanced OSINT Data Correlation Engine"""
 
-    def __init__(
-        self, 
-        neo4j_uri: str = "bolt://localhost:7687", 
-        neo4j_user: str = "neo4j", 
-        neo4j_password: str = "osintpassword"
-    ):
+    def __init__(self):
+        load_dotenv()
+        self.neo4j_uri = os.getenv('NEO4J_URI', 'bolt://localhost:7687')
+        self.neo4j_user = os.getenv('NEO4J_USER', 'neo4j')
+        self.neo4j_password = os.getenv('NEO4J_PASSWORD', 'osintpassword')
+        self.sentry_dsn = os.getenv('SENTRY_DSN')
+        
         """Initialize correlator with Neo4j connection"""
         try:
             self.graph = GraphDatabase.driver(
@@ -81,7 +83,7 @@ class OSINTCorrelator:
         data_dir: str = "/opt/osint/data",
         batch_size: int = 1000
     ) -> bool:
-        """Efficiently process OSINT data with batching"""
+        """Process data with batching"""
         target_dir = os.path.join(data_dir, "targets", target_name)
         
         if not os.path.exists(target_dir):
@@ -89,7 +91,6 @@ class OSINTCorrelator:
             return False
         
         try:
-            # Use pandas for efficient file listing and processing
             files = [
                 os.path.join(root, f) 
                 for root, _, files in os.walk(target_dir) 
@@ -98,7 +99,6 @@ class OSINTCorrelator:
             
             logger.info(f"Found {len(files)} files to process")
             
-            # Process files in batches
             for i in range(0, len(files), batch_size):
                 batch_files = files[i:i+batch_size]
                 self._process_file_batch(batch_files, target_name)
@@ -111,7 +111,7 @@ class OSINTCorrelator:
             return False
 
     def _process_file_batch(self, files, target_name):
-        """Process a batch of files efficiently"""
+        """Process a batch of files"""
         with self.graph.session() as session:
             for file_path in files:
                 try:

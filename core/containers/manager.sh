@@ -22,11 +22,36 @@ CONTAINERS=(
   "data"
 )
 
+# Validate environment
+validate_environment() {
+    if [ -z "$DATA_DIR" ] || [ ! -d "$DATA_DIR" ]; then
+        echo -e "${RED}Error: DATA_DIR not set or invalid${NC}"
+        exit 1
+    fi
+    
+    if [ -z "$NETWORK" ]; then
+        echo -e "${RED}Error: NETWORK not set${NC}"
+        exit 1
+    fi
+    
+    # Create required directories
+    mkdir -p "$DATA_DIR/backup"
+    mkdir -p "$DATA_DIR/logs"
+    mkdir -p "$DATA_DIR/scan_results"
+    
+    # Set proper permissions
+    chown -R osint:osint "$DATA_DIR"
+    chmod 700 "$DATA_DIR"
+}
+
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then
-  echo -e "${RED}Please run as root${NC}"
-  exit 1
+    echo -e "${RED}Please run as root${NC}"
+    exit 1
 fi
+
+# Validate environment
+validate_environment()
 
 # =====================================
 # Container Status Functions
@@ -595,6 +620,33 @@ run_tool() {
 }
 
 # =====================================
+# Backup Function
+# =====================================
+
+backup_containers() {
+    # Create timestamped backup directory
+    local timestamp=$(date +%Y%m%d_%H%M%S)
+    local backup_path="$DATA_DIR/backup/$timestamp"
+    mkdir -p "$backup_path"
+    
+    # Backup container data
+    for container in "${CONTAINERS[@]}"; do
+        echo -e "${BLUE}Backing up $container...${NC}"
+        nerdctl export "$container" > "$backup_path/$container.tar" || {
+            echo -e "${RED}Failed to backup $container${NC}"
+            continue
+        }
+        echo -e "${GREEN}Successfully backed up $container${NC}"
+    done
+    
+    # Rotate backups (keep last 7 days)
+    echo -e "${BLUE}Rotating backups...${NC}"
+    find "$DATA_DIR/backup" -type d -mtime +7 -exec rm -rf {} \;
+    
+    echo -e "${GREEN}Backup completed successfully${NC}"
+}
+
+# =====================================
 # Help Function
 # =====================================
 
@@ -731,3 +783,9 @@ main() {
 
 # Run main function with all arguments
 main "$@"
+
+# Add backup option
+if [ "$1" == "backup" ]; then
+    shift
+    backup_containers "$@"
+fi

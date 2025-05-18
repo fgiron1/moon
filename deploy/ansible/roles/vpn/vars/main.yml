@@ -1,0 +1,86 @@
+## Mullvad VPN Configuration
+
+# Authentication
+mullvad:
+  account:
+    number: "{{ lookup('env', 'MULLVAD_ACCOUNT_NUMBER') }}"
+    key: "{{ lookup('env', 'MULLVAD_ACCOUNT_KEY') }}"
+  
+  # Connection Settings
+  connection:
+    protocol: wireguard
+    interface: tun0
+    port: 51820
+    
+    # Preferred Relay Settings
+    relay:
+      location:
+        country: "{{ lookup('env', 'MULLVAD_RELAY_COUNTRY') | default('se') }}"  # Sweden by default
+        city: "{{ lookup('env', 'MULLVAD_RELAY_CITY') }}"
+      
+      # Features
+      features:
+        wireguard_ipv6: true
+        wireguard_multihop: true
+        
+    # Connection Management
+    auto_connect: true
+    reconnect_timeout: 30
+    
+  # Security Settings
+  security:
+    killswitch:
+      enabled: true
+      
+    # DNS Protection
+    dns:
+      enabled: true
+      servers:
+        - 193.138.218.74  # Mullvad DNS
+        - 193.138.218.75  # Mullvad DNS
+      
+    # Firewall Rules
+    firewall:
+      enabled: true
+      rules:
+        - action: allow
+          protocol: udp
+          port: 51820
+          comment: "WireGuard"
+        - action: allow
+          protocol: tcp
+          port: 53
+          comment: "DNS"
+        - action: allow
+          protocol: udp
+          port: 53
+          comment: "DNS"
+
+# WireGuard Configuration
+wireguard:
+  config:
+    path: /etc/wireguard/moon.conf
+    
+  # Network Settings
+  network:
+    interface: tun0
+    address: "{{ lookup('env', 'WIREGUARD_ADDRESS') | default('10.0.0.1/24') }}"
+    
+  # Security Settings
+  security:
+    mtu: 1420
+    save_config: true
+    
+  # Logging
+  logging:
+    enabled: true
+    level: info
+    path: /var/log/wireguard.log
+
+# Environment Variable Mapping
+env_mapping:
+  mullvad_account_number: "{{ lookup('env', 'MULLVAD_ACCOUNT_NUMBER') }}"
+  mullvad_account_key: "{{ lookup('env', 'MULLVAD_ACCOUNT_KEY') }}"
+  mullvad_relay_country: "{{ lookup('env', 'MULLVAD_RELAY_COUNTRY') | default('se') }}"
+  mullvad_relay_city: "{{ lookup('env', 'MULLVAD_RELAY_CITY') }}"
+  wireguard_address: "{{ lookup('env', 'WIREGUARD_ADDRESS') | default('10.0.0.1/24') }}"

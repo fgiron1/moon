@@ -1,6 +1,0 @@
----
-- name: Install and configure containerd
-  hosts: osint_servers
-  become: yes
-  roles:
-    - containerd

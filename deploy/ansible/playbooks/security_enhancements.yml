@@ -1,9 +1,13 @@
 ---
 - name: Security hardening
-  hosts: osint_servers
+  hosts: all
   become: yes
   roles:
-    - security_enhancements
+    - role: security
+      tags: security
+    
+    - role: common
+      tags: common
 
   tasks:
     - name: Install security packages

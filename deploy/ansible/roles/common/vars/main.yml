@@ -1,0 +1,125 @@
+## Common variables for Moon Security Platform
+
+## Security Configuration
+security:
+  # SSH Configuration
+  ssh:
+    port: 2222
+    allowed_users:
+      - moon_user
+    key_management:
+      - type: ed25519
+    fail2ban:
+      enabled: true
+      max_retries: 5
+      ban_time: 3600
+      
+  # Firewall Configuration
+  firewall:
+    enabled: true
+    rules:
+      - port: 2222
+        protocol: tcp
+        comment: "SSH access"
+      - port: 53
+        protocol: udp
+        comment: "DNS"
+      - port: 443
+        protocol: tcp
+        comment: "HTTPS"
+      - port: 1723
+        protocol: tcp
+        comment: "PPTP VPN"
+
+  # System Hardening
+  hardening:
+    enabled: true
+    packages:
+      - ufw
+      - fail2ban
+      - haveged
+      - unattended-upgrades
+
+## Network Configuration
+network:
+  # VPN Configuration
+  vpn:
+    provider: mullvad
+    enabled: true
+    interface: tun0
+    config_path: /etc/wireguard/moon.conf
+    
+  # Network Interfaces
+  interfaces:
+    primary: eth0
+    vpn: tun0
+    
+  # Network Monitoring
+  monitoring:
+    enabled: true
+    tools:
+      - nmap
+      - tcpdump
+      - wireshark
+      - prometheus
+      - node_exporter
+    
+  # Container Security
+  container_security:
+    limits:
+      memory: 2g
+      cpus: 2
+      pids: 1000
+    network:
+      policy: restricted
+      ports:
+        allowed:
+          - 80/tcp
+          - 443/tcp
+          - 2222/tcp
+    mounts:
+      readonly:
+        - /etc
+        - /usr
+      writable:
+        - /opt/osint/data
+        - /var/log/osint
+
+## OSINT Tools Configuration
+osint:
+  tools:
+    - theharvester
+    - sublist3r
+    - nmap
+    - wireshark
+    - bluetooth-tools
+    - aircrack-ng
+  updates:
+    auto: true
+    interval: daily
+    
+  # Bluetooth Configuration
+  bluetooth:
+    enabled: true
+    scan_interval: 60
+    log_path: /var/log/bluetooth_scans
+    
+  # WiFi Configuration
+  wifi:
+    enabled: true
+    scan_interval: 300
+    log_path: /var/log/wifi_scans
+
+## Environment Variables Mapping
+env_mapping:
+  ssh_port: "{{ lookup('env', 'SSH_PORT') | default('2222') }}"
+  vpn_provider: "{{ lookup('env', 'VPN_PROVIDER') | default('mullvad') }}"
+  allowed_users: "{{ lookup('env', 'ALLOWED_USERS') | default('moon_user') | split(',') }}"
+
+database:
+  neo4j:
+    uri: "{{ lookup('env', 'NEO4J_URI') }}"
+    user: "{{ lookup('env', 'NEO4J_USER') }}"
+    password: "{{ lookup('env', 'NEO4J_PASSWORD') }}"
+    data_dir: "{{ lookup('env', 'DATA_DIR') }}"
+    log_dir: "{{ lookup('env', 'LOG_DIR') }}"
