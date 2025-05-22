@@ -40,6 +40,26 @@ RUN mkdir -p /opt/osint/tools/web_analysis/wordlists && \
     wget -q -O common.txt https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/common.txt && \
     wget -q -O directory-list-2.3-medium.txt https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/directory-list-2.3-medium.txt
 
+
+RUN gem install cewl
+
+# Install Arjun for parameter discovery
+RUN pip3 install arjun
+
+# Install LinkFinder for endpoint discovery
+RUN git clone https://github.com/GerbenJavado/LinkFinder.git /opt/osint/tools/linkfinder && \
+    cd /opt/osint/tools/linkfinder && \
+    pip3 install -r requirements.txt
+
+# Install SecLists wordlists
+RUN git clone --depth 1 https://github.com/danielmiessler/SecLists.git /opt/osint/wordlists/seclists
+
+# Install additional wordlists
+RUN mkdir -p /opt/osint/wordlists && \
+    cd /opt/osint/wordlists && \
+    wget https://github.com/assetnote/commonspeak2-wordlists/raw/master/subdomains/subdomains.txt -O commonspeak2-subdomains.txt && \
+    wget https://raw.githubusercontent.com/fuzzdb-project/fuzzdb/master/discovery/predictable-filepaths/filename-dirname-bruteforce/raft-large-directories.txt
+
 # Configure WhatWeb path
 ENV PATH="/opt/osint/tools/whatweb:${PATH}"
 

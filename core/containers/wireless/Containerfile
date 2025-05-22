@@ -1,0 +1,53 @@
+# core/containers/wireless/Containerfile
+FROM osint-base:latest
+
+# Install wireless testing tools
+RUN apt-get update && apt-get install -y \
+    aircrack-ng \
+    reaver \
+    pixiewps \
+    bully \
+    cowpatty \
+    macchanger \
+    wireless-tools \
+    net-tools \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install hcxdumptool and hcxtools
+RUN git clone https://github.com/ZerBea/hcxdumptool.git && \
+    cd hcxdumptool && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf hcxdumptool
+
+RUN git clone https://github.com/ZerBea/hcxtools.git && \
+    cd hcxtools && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf hcxtools
+
+# Install bettercap
+RUN apt-get update && apt-get install -y \
+    libpcap-dev \
+    libusb-1.0-0-dev \
+    libnetfilter-queue-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN go install -v github.com/bettercap/bettercap@latest && \
+    cp ~/go/bin/bettercap /usr/local/bin/
+
+# Create directory for captures
+RUN mkdir -p /opt/osint/data/wireless/captures
+
+# Switch to non-root user
+USER osint
+
+WORKDIR /opt/osint/tools/wireless
+
+VOLUME ["/opt/osint/data"]
+
+CMD ["/bin/bash"]

@@ -188,6 +188,28 @@ class OSINTCorrelator:
             self.logger.error(f"JSON data processing error: {e}")
             sentry_sdk.capture_exception(e)
 
+    def process_pentest_data(self, target_name):
+        """Process penetration testing results"""
+        pentest_dir = os.path.join(self.data_dir, "pentesting")
+        
+        if not os.path.exists(pentest_dir):
+            return
+        
+        # Process SQL injection results
+        sqli_dir = os.path.join(pentest_dir, "sqli")
+        if os.path.exists(sqli_dir):
+            self._process_sqli_results(sqli_dir, target_name)
+        
+        # Process brute force results
+        bruteforce_dir = os.path.join(pentest_dir, "bruteforce")
+        if os.path.exists(bruteforce_dir):
+            self._process_bruteforce_results(bruteforce_dir, target_name)
+        
+        # Process SMB enumeration results
+        smb_dir = os.path.join(pentest_dir, "smb")
+        if os.path.exists(smb_dir):
+            self._process_smb_results(smb_dir, target_name)
+
     def _create_entity_node(self, session, entity, target_name):
         """Create entity node in Neo4j"""
         create_node_query = """

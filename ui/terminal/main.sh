@@ -117,6 +117,7 @@ main_menu() {
   echo -e "5. ${BLUE}[🔒]${NC} Security & Privacy"
   echo -e "6. ${BLUE}[⚙️]${NC} System Controls"
   echo -e "7. ${BLUE}[📊]${NC} Data Correlation"
+  echo -e "8. ${BLUE}[⚔️]${NC} Penetration Testing"
   echo -e "0. ${RED}[✖]${NC} Exit"
   echo ""
   
@@ -130,6 +131,7 @@ main_menu() {
     5) security_menu || main_menu ;;
     6) system_menu || main_menu ;;
     7) data_correlation_menu || main_menu ;;
+    8) pentesting_menu || main_menu ;;
     0) exit_menu ;;
     *) main_menu ;;
   esac

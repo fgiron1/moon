@@ -20,8 +20,9 @@ CONTAINERS=(
   "identity"
   "web"
   "data"
+  "pentesting"
+  "wireless"
 )
-
 # Validate environment
 validate_environment() {
     if [ -z "$DATA_DIR" ] || [ ! -d "$DATA_DIR" ]; then
